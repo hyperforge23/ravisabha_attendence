@@ -4,6 +4,8 @@ export interface User {
   lastName: string;
   smkNo: string;
   mobileNo: string;
+  firstNameGuj?: string;
+  lastNameGuj?: string;
 }
 
 export type AttendanceStatus = "Present" | "Absent";

@@ -8,18 +8,20 @@ import AttendanceList from '@/components/AttendanceList';
 
 export default function Home() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectionKey, setSelectionKey] = useState(0);
+
+  const handleSelectUser = (user: User) => {
+    setSelectedUser(user);
+    setSelectionKey((prev) => prev + 1);
+  };
 
   return (
     <div className="space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Mark Attendance</h1>
-        <p className="text-gray-500">Search for a user and mark their attendance status.</p>
-      </div>
-
-      <SearchSection onSelectUser={setSelectedUser} />
+      <SearchSection onSelectUser={handleSelectUser} />
 
       {selectedUser && (
         <UserCard
+          key={selectionKey}
           user={selectedUser}
           onClear={() => setSelectedUser(null)}
         />

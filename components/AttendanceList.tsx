@@ -287,8 +287,11 @@ export default function AttendanceList() {
               {filteredAndSortedRecords.length > 0 ? (
                 filteredAndSortedRecords.map((record) => (
                   <tr key={record.id} className="group hover:bg-gray-50/50">
-                    <td className="max-w-[80px] truncate pl-3 pr-1 py-4 font-medium text-gray-900 text-xs md:text-sm md:max-w-none md:px-6">
-                      {record.user.firstName} {record.user.lastName}
+                    <td className="pl-3 pr-1 py-4 font-medium text-gray-900 text-xs md:text-sm md:px-6">
+                      <div className="flex flex-col md:block">
+                        <span>{record.user.firstName}</span>
+                        <span className="md:ml-1">{record.user.lastName}</span>
+                      </div>
                     </td>
                     <td className="hidden px-1 py-4 text-gray-500 text-xs md:text-sm md:table-cell md:px-6">{record.user.smkNo}</td>
                     <td className="hidden px-1 py-4 text-gray-500 text-xs md:text-sm md:table-cell md:px-6">{record.user.mobileNo}</td>

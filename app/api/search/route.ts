@@ -65,6 +65,8 @@ export async function GET(request: Request) {
       lastName: user.LastName,
       smkNo: user.SmkId,
       mobileNo: user.MobileNo ? user.MobileNo.toString() : '',
+      firstNameGuj: user.FirstNameGuj,
+      lastNameGuj: user.LastNameGuj,
     }));
 
     return NextResponse.json({ users: formattedUsers });

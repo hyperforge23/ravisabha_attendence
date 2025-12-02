@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AttendanceProvider } from "@/components/AttendanceProvider";
 import { AuthProvider } from "@/components/AuthProvider";
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({
                 {children}
               </main>
             </div>
+            <Toaster position="top-right" richColors />
           </AttendanceProvider>
         </AuthProvider>
       </body>

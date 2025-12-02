@@ -16,6 +16,7 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
   const [results, setResults] = useState<User[]>([]);
   const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -47,11 +48,35 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
     return () => clearTimeout(debounceTimer);
   }, [query, searchField]);
 
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [results]);
+
   const handleSelect = (user: User) => {
     onSelectUser(user);
     setQuery('');
     setResults([]);
     setIsFocused(false);
+    setActiveIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!results.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < results.length) {
+        handleSelect(results[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsFocused(false);
+    }
   };
 
   return (
@@ -77,9 +102,13 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
             type="text"
             placeholder={`Search by ${searchField}...`}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsFocused(true);
+            }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            onKeyDown={handleKeyDown}
             className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
           />
         </div>
@@ -90,20 +119,37 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
               <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
             ) : results.length > 0 ? (
               <ul className="max-h-60 overflow-y-auto py-2">
-                {results.map((user) => (
-                  <li
-                    key={user.id}
-                    onClick={() => handleSelect(user)}
-                    className="cursor-pointer px-4 py-2 hover:bg-gray-50 flex flex-col sm:flex-row sm:justify-between sm:items-center"
-                  >
-                    <span className="font-medium text-gray-900">
-                      {user.firstName} {user.lastName}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {user.smkNo} • {user.mobileNo}
-                    </span>
-                  </li>
-                ))}
+                {results.map((user, index) => {
+                  const isNameMatch = searchField === 'firstName' || searchField === 'lastName';
+                  const isSmkMatch = searchField === 'smkNo';
+                  const isMobileMatch = searchField === 'mobileNo';
+
+                  return (
+                    <li
+                      key={user.id}
+                      onClick={() => handleSelect(user)}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
+                        index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className={`${isNameMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
+                        {user.firstName} {user.lastName}
+                      </span>
+                      
+                      <div className="flex items-center gap-2 sm:contents">
+                        <span className="hidden sm:block text-gray-300">|</span>
+                        <span className={`whitespace-nowrap ${isSmkMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
+                          {user.smkNo}
+                        </span>
+                        <span className="text-gray-300">|</span>
+                        <span className={`whitespace-nowrap ${isMobileMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
+                          {user.mobileNo}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <div className="px-4 py-3 text-sm text-gray-500">No users found.</div>
