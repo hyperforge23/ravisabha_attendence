@@ -3,9 +3,15 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
+interface AuthUser {
+  id: string;
+  username: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: () => void;
+  user: AuthUser | null;
+  login: (user: AuthUser) => void;
   logout: () => void;
 }
 
@@ -13,6 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
@@ -20,8 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Check local storage for auth state on mount
     const storedAuth = localStorage.getItem('isAuthenticated');
-    if (storedAuth === 'true') {
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedAuth === 'true' && storedUser) {
       setIsAuthenticated(true);
+      setUser(JSON.parse(storedUser));
+    } else {
+      // DEV: Auto-login as Dev User to skip login page
+      const devUser = { id: '507f1f77bcf86cd799439011', username: 'dev_user' }; // Random valid ObjectId
+      setIsAuthenticated(true);
+      setUser(devUser);
     }
     setIsLoading(false);
   }, []);
@@ -38,20 +53,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null; // Or return a loading spinner
   }
 
-  const login = () => {
+  const login = (userData: AuthUser) => {
     setIsAuthenticated(true);
+    setUser(userData);
     localStorage.setItem('isAuthenticated', 'true');
+    localStorage.setItem('user', JSON.stringify(userData));
     router.push('/');
   };
 
   const logout = () => {
     setIsAuthenticated(false);
+    setUser(null);
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('user');
     router.push('/login');
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

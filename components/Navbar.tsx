@@ -21,10 +21,10 @@ export default function Navbar() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-white font-bold text-lg shadow-sm">
-            A
+            D
           </div>
           <span className="text-lg font-semibold tracking-tight text-gray-900">
-            Attendance Manager
+            Divyabaug Directory
           </span>
         </div>
         <div className="flex items-center gap-4 sm:gap-6">

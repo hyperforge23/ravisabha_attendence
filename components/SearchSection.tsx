@@ -138,11 +138,11 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
                       </span>
                       
                       <div className="flex items-center gap-2 sm:contents">
-                        <span className="hidden sm:block text-gray-300">|</span>
+                        <span className="text-gray-300 hidden sm:block">|</span>
                         <span className={`whitespace-nowrap ${isSmkMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
                           {user.smkNo}
                         </span>
-                        <span className="text-gray-300">|</span>
+                        <span className="text-gray-300 hidden sm:block">|</span>
                         <span className={`whitespace-nowrap ${isMobileMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
                           {user.mobileNo}
                         </span>

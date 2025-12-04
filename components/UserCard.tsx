@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { User } from '@/lib/types';
 import { useAttendance } from '@/components/AttendanceProvider';
+import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
-
 import { Calendar, Clock } from 'lucide-react';
 
 interface UserCardProps {
@@ -14,9 +14,11 @@ interface UserCardProps {
 
 export default function UserCard({ user, onClear }: UserCardProps) {
   const { addRecord, records } = useAttendance();
+  const { user: authUser } = useAuth();
 
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const now = new Date();
@@ -24,8 +26,8 @@ export default function UserCard({ user, onClear }: UserCardProps) {
     setTime(now.toTimeString().slice(0, 5));
   }, []);
 
-  const handleSubmit = () => {
-    if (!date || !time) return;
+  const handleSubmit = async () => {
+    if (!date || !time || !authUser) return;
 
     const isDuplicate = records.some(
       (record) => record.user.id === user.id && record.date === date
@@ -36,17 +38,46 @@ export default function UserCard({ user, onClear }: UserCardProps) {
       return;
     }
 
-    addRecord({
-      id: crypto.randomUUID(),
-      user,
-      status: 'Present',
-      date,
-      time,
-      timestamp: new Date(`${date}T${time}`).getTime(),
-    });
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          smkDetailId: user.id,
+          userId: authUser.id,
+          SmkId: user.smkNo,
+          name: `${user.firstName} ${user.lastName}`,
+          status: 'present',
+          date: new Date(`${date}T${time}`),
+        }),
+      });
 
-    toast.success('Attendance marked');
-    onClear();
+      if (!response.ok) {
+        throw new Error('Failed to save attendance');
+      }
+
+      const data = await response.json();
+
+      addRecord({
+        id: data.attendance._id,
+        user,
+        status: 'Present',
+        date,
+        time,
+        timestamp: new Date(`${date}T${time}`).getTime(),
+      });
+
+      toast.success('Attendance marked');
+      onClear();
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      toast.error('Failed to mark attendance');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -100,9 +131,10 @@ export default function UserCard({ user, onClear }: UserCardProps) {
         <div className="flex items-end">
           <button
             onClick={handleSubmit}
+            disabled={isSubmitting}
             className="w-full rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Present
+            {isSubmitting ? 'Saving...' : 'Present'}
           </button>
         </div>
       </div>

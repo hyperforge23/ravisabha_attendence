@@ -27,9 +27,7 @@ export default function Home() {
         />
       )}
 
-      <div className="pt-8">
         <AttendanceList />
-      </div>
     </div>
   );
 }

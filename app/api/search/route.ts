@@ -67,6 +67,7 @@ export async function GET(request: Request) {
       mobileNo: user.MobileNo ? user.MobileNo.toString() : '',
       firstNameGuj: user.FirstNameGuj,
       lastNameGuj: user.LastNameGuj,
+      gender: user.Gender?.toString(),
     }));
 
     return NextResponse.json({ users: formattedUsers });

@@ -28,7 +28,7 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        login();
+        login(data.user);
       } else {
         setError(data.message || 'Invalid username or password');
       }

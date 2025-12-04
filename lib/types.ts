@@ -6,6 +6,7 @@ export interface User {
   mobileNo: string;
   firstNameGuj?: string;
   lastNameGuj?: string;
+  gender?: string;
 }
 
 export type AttendanceStatus = "Present" | "Absent";
