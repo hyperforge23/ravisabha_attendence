@@ -32,11 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedAuth === 'true' && storedUser) {
       setIsAuthenticated(true);
       setUser(JSON.parse(storedUser));
-    } else {
-      // DEV: Auto-login as Dev User to skip login page
-      const devUser = { id: '507f1f77bcf86cd799439011', username: 'dev_user' }; // Random valid ObjectId
-      setIsAuthenticated(true);
-      setUser(devUser);
     }
     setIsLoading(false);
   }, []);
