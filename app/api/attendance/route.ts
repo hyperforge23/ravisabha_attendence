@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import Attendance from "@/models/Attendance";
+// Import all models to ensure they are registered (needed for populate)
+import "@/models";
 
 export async function POST(request: Request) {
   try {
