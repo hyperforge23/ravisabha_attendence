@@ -16,7 +16,11 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-export default function AttendanceList() {
+interface AttendanceListProps {
+  ravisabhaId?: string;
+}
+
+export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; recordId: string | null }>({
     isOpen: false,
     recordId: null,

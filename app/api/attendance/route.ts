@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import Attendance from "@/models/Attendance";
+import mongoose from "mongoose";
 // Import all models to ensure they are registered (needed for populate)
 import "@/models";
 
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
     await connectDb();
 
     const body = await request.json();
-    const { smkDetailId, userId, SmkId, name, status, remarks } = body;
+    const { smkDetailId, userId, ravisabhaId, SmkId, name, status, remarks } = body;
 
     if (!smkDetailId || !userId || !SmkId) {
       return NextResponse.json(
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
     const newAttendance = new Attendance({
       smkDetailId,
       userId,
+      ravisabhaId: ravisabhaId || undefined,
       SmkId,
       name,
       status: status || "absent",
@@ -50,6 +52,22 @@ export async function GET(request: Request) {
     const date = searchParams.get("date");
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
+    const ravisabhaId = searchParams.get("ravisabhaId");
+
+    let query: any = {};
+
+    // Add ravisabhaId filter if provided
+    if (ravisabhaId) {
+      // Convert string to ObjectId for proper querying
+      if (mongoose.Types.ObjectId.isValid(ravisabhaId)) {
+        query.ravisabhaId = new mongoose.Types.ObjectId(ravisabhaId);
+      } else {
+        return NextResponse.json(
+          { message: "Invalid ravisabhaId format" },
+          { status: 400 }
+        );
+      }
+    }
 
     let queryStartDate: Date;
     let queryEndDate: Date;
@@ -60,25 +78,31 @@ export async function GET(request: Request) {
       
       queryEndDate = new Date(endDateParam);
       queryEndDate.setHours(23, 59, 59, 999);
+      
+      query.date = {
+        $gte: queryStartDate,
+        $lte: queryEndDate,
+      };
     } else if (date) {
       queryStartDate = new Date(date);
       queryStartDate.setHours(0, 0, 0, 0);
       
       queryEndDate = new Date(date);
       queryEndDate.setHours(23, 59, 59, 999);
-    } else {
+      
+      query.date = {
+        $gte: queryStartDate,
+        $lte: queryEndDate,
+      };
+    } else if (!ravisabhaId) {
+      // If no ravisabhaId and no date, require date
       return NextResponse.json(
         { message: "Date or Date Range parameters are required" },
         { status: 400 }
       );
     }
 
-    const records = await Attendance.find({
-      date: {
-        $gte: queryStartDate,
-        $lte: queryEndDate,
-      },
-    })
+    const records = await Attendance.find(query)
     .populate("smkDetailId") // Populate user details if needed
     .sort({ date: -1 });
 

@@ -12,7 +12,7 @@ export default function Navbar() {
   if (!isAuthenticated) return null;
 
   const navItems = [
-    { name: 'Home', href: '/' },
+    { name: 'Home', href: '/ravisabha' },
     { name: 'Export', href: '/export' },
   ];
 
@@ -24,7 +24,7 @@ export default function Navbar() {
             D
           </div>
           <span className="text-lg font-semibold tracking-tight text-gray-900">
-            Divyabaug Directory
+            Divyabaug
           </span>
         </div>
         <div className="flex items-center gap-4 sm:gap-6">
@@ -34,7 +34,7 @@ export default function Navbar() {
               href={item.href}
               className={cn(
                 "text-sm font-medium transition-colors hover:text-gray-900",
-                pathname === item.href
+                pathname === item.href || (item.href === '/ravisabha' && pathname === '/')
                   ? "text-gray-900 font-semibold"
                   : "text-gray-500"
               )}

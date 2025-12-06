@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AttendanceRecord, AttendanceStatus } from '@/lib/types';
 import axios from 'axios';
 
@@ -14,17 +15,24 @@ interface AttendanceContextType {
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
 
 export function AttendanceProvider({ children }: { children: ReactNode }) {
+  const searchParams = useSearchParams();
+  const ravisabhaId = searchParams?.get('ravisabhaId');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
 
   useEffect(() => {
-    const fetchTodayRecords = async () => {
+    const fetchRecords = async () => {
       try {
-        const today = new Date().toISOString().split('T')[0];
-        const { data } = await axios.get('/api/attendance', {
-          params: {
-            date: today,
-          },
-        });
+        const params: any = {};
+        
+        if (ravisabhaId) {
+          params.ravisabhaId = ravisabhaId;
+        } else {
+          // If no ravisabhaId, fetch today's records
+          const today = new Date().toISOString().split('T')[0];
+          params.date = today;
+        }
+        
+        const { data } = await axios.get('/api/attendance', { params });
         
         // Map DB records to frontend AttendanceRecord type
         const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
@@ -51,8 +59,8 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    fetchTodayRecords();
-  }, []);
+    fetchRecords();
+  }, [ravisabhaId]);
 
   const addRecord = (record: AttendanceRecord) => {
     setRecords((prev) => [record, ...prev]);
