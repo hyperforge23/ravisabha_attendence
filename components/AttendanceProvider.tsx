@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AttendanceRecord, AttendanceStatus } from '@/lib/types';
+import axios from 'axios';
 
 interface AttendanceContextType {
   records: AttendanceRecord[];
@@ -19,32 +20,32 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
     const fetchTodayRecords = async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const response = await fetch(`/api/attendance?date=${today}`);
+        const { data } = await axios.get('/api/attendance', {
+          params: {
+            date: today,
+          },
+        });
         
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Map DB records to frontend AttendanceRecord type
-          const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
-            id: record._id,
-            user: {
-              id: record.smkDetailId._id,
-              firstName: record.smkDetailId.FirstName,
-              lastName: record.smkDetailId.LastName,
-              smkNo: record.smkDetailId.SmkId,
-              mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-              firstNameGuj: record.smkDetailId.FirstNameGuj,
-              lastNameGuj: record.smkDetailId.LastNameGuj,
-              gender: record.smkDetailId.Gender?.toString(),
-            },
-            status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
-            date: record.date.split('T')[0],
-            time: new Date(record.date).toTimeString().slice(0, 5),
-            timestamp: new Date(record.date).getTime(),
-          }));
+        // Map DB records to frontend AttendanceRecord type
+        const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
+          id: record._id,
+          user: {
+            id: record.smkDetailId._id,
+            firstName: record.smkDetailId.FirstName,
+            lastName: record.smkDetailId.LastName,
+            smkNo: record.smkDetailId.SmkId,
+            mobileNo: record.smkDetailId.MobileNo?.toString() || '',
+            firstNameGuj: record.smkDetailId.FirstNameGuj,
+            lastNameGuj: record.smkDetailId.LastNameGuj,
+            gender: record.smkDetailId.Gender?.toString(),
+          },
+          status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
+          date: record.date.split('T')[0],
+          time: new Date(record.date).toTimeString().slice(0, 5),
+          timestamp: new Date(record.date).getTime(),
+        }));
 
-          setRecords(mappedRecords);
-        }
+        setRecords(mappedRecords);
       } catch (error) {
         console.error('Error fetching today records:', error);
       }

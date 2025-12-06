@@ -5,6 +5,7 @@ import { AttendanceRecord } from '@/lib/types';
 import { downloadCSV } from '@/lib/csv';
 import { cn, formatTo12Hour } from '@/lib/utils';
 import { Download, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import axios from 'axios';
 
 type DateRange = 'this-month' | 'last-3-months' | 'last-6-months' | 'custom';
 type SortKey = 'name' | 'smkNo' | 'mobileNo' | 'dateTime' | 'status';
@@ -66,31 +67,32 @@ export default function ExportPage() {
         const queryStart = start.toISOString().split('T')[0];
         const queryEnd = end.toISOString().split('T')[0];
         
-        const response = await fetch(`/api/attendance?startDate=${queryStart}&endDate=${queryEnd}`);
+        const { data } = await axios.get('/api/attendance', {
+          params: {
+            startDate: queryStart,
+            endDate: queryEnd,
+          },
+        });
         
-        if (response.ok) {
-          const data = await response.json();
-          
-          const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
-            id: record._id,
-            user: {
-              id: record.smkDetailId._id,
-              firstName: record.smkDetailId.FirstName,
-              lastName: record.smkDetailId.LastName,
-              smkNo: record.smkDetailId.SmkId,
-              mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-              firstNameGuj: record.smkDetailId.FirstNameGuj,
-              lastNameGuj: record.smkDetailId.LastNameGuj,
-              gender: record.smkDetailId.Gender?.toString(),
-            },
-            status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
-            date: record.date.split('T')[0],
-            time: new Date(record.date).toTimeString().slice(0, 5),
-            timestamp: new Date(record.date).getTime(),
-          }));
+        const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
+          id: record._id,
+          user: {
+            id: record.smkDetailId._id,
+            firstName: record.smkDetailId.FirstName,
+            lastName: record.smkDetailId.LastName,
+            smkNo: record.smkDetailId.SmkId,
+            mobileNo: record.smkDetailId.MobileNo?.toString() || '',
+            firstNameGuj: record.smkDetailId.FirstNameGuj,
+            lastNameGuj: record.smkDetailId.LastNameGuj,
+            gender: record.smkDetailId.Gender?.toString(),
+          },
+          status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
+          date: record.date.split('T')[0],
+          time: new Date(record.date).toTimeString().slice(0, 5),
+          timestamp: new Date(record.date).getTime(),
+        }));
 
-          setRecords(mappedRecords);
-        }
+        setRecords(mappedRecords);
       } catch (error) {
         console.error('Error fetching export records:', error);
         setRecords([]);

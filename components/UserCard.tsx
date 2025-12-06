@@ -6,6 +6,7 @@ import { useAttendance } from '@/components/AttendanceProvider';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 import { Calendar, Clock } from 'lucide-react';
+import axios from 'axios';
 
 interface UserCardProps {
   user: User;
@@ -40,26 +41,14 @@ export default function UserCard({ user, onClear }: UserCardProps) {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/attendance', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          smkDetailId: user.id,
-          userId: authUser.id,
-          SmkId: user.smkNo,
-          name: `${user.firstName} ${user.lastName}`,
-          status: 'present',
-          date: new Date(`${date}T${time}`),
-        }),
+      const { data } = await axios.post('/api/attendance', {
+        smkDetailId: user.id,
+        userId: authUser.id,
+        SmkId: user.smkNo,
+        name: `${user.firstName} ${user.lastName}`,
+        status: 'present',
+        date: new Date(`${date}T${time}`),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save attendance');
-      }
-
-      const data = await response.json();
 
       addRecord({
         id: data.attendance._id,
