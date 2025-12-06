@@ -6,6 +6,7 @@ import { cn, formatTo12Hour } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AttendanceRecord } from '@/lib/types';
+import axios from 'axios';
 
 type SortKey = 'name' | 'smkNo' | 'mobileNo' | 'dateTime' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -15,7 +16,11 @@ interface SortConfig {
   direction: SortDirection;
 }
 
-export default function AttendanceList() {
+interface AttendanceListProps {
+  ravisabhaId?: string;
+}
+
+export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; recordId: string | null }>({
     isOpen: false,
     recordId: null,
@@ -29,16 +34,13 @@ export default function AttendanceList() {
     if (!deleteConfirmation.recordId) return;
 
     try {
-      const response = await fetch(`/api/attendance?id=${deleteConfirmation.recordId}`, {
-        method: 'DELETE',
+      await axios.delete('/api/attendance', {
+        params: {
+          id: deleteConfirmation.recordId,
+        },
       });
-
-      if (response.ok) {
-        removeRecord(deleteConfirmation.recordId);
-        toast.success('Record deleted successfully');
-      } else {
-        toast.error('Failed to delete record');
-      }
+      removeRecord(deleteConfirmation.recordId);
+      toast.success('Record deleted successfully');
     } catch (error) {
       console.error('Error deleting record:', error);
       toast.error('Error deleting record');

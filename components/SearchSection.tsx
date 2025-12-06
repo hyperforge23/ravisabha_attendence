@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Search, ChevronDown } from 'lucide-react';
 import { User } from '@/lib/types';
+import axios from 'axios';
 
 interface SearchSectionProps {
   onSelectUser: (user: User) => void;
@@ -27,14 +28,13 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
 
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/search?query=${encodeURIComponent(query)}&field=${searchField}`);
-        if (response.ok) {
-          const data = await response.json();
-          setResults(data.users);
-        } else {
-          console.error('Search failed');
-          setResults([]);
-        }
+        const { data } = await axios.get('/api/search', {
+          params: {
+            query,
+            field: searchField,
+          },
+        });
+        setResults(data.users);
       } catch (error) {
         console.error('Search error:', error);
         setResults([]);

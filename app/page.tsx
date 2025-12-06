@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { User } from '@/lib/types';
 import SearchSection from '@/components/SearchSection';
 import UserCard from '@/components/UserCard';
 import AttendanceList from '@/components/AttendanceList';
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const ravisabhaId = searchParams.get('ravisabhaId');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectionKey, setSelectionKey] = useState(0);
 
@@ -19,15 +22,14 @@ export default function Home() {
     <div className="space-y-8">
       <SearchSection onSelectUser={handleSelectUser} />
 
-      {selectedUser && (
-        <UserCard
-          key={selectionKey}
-          user={selectedUser}
-          onClear={() => setSelectedUser(null)}
-        />
-      )}
+      <UserCard
+        key={selectionKey}
+        user={selectedUser}
+        ravisabhaId={ravisabhaId || undefined}
+        onClear={() => setSelectedUser(null)}
+      />
 
-        <AttendanceList />
+      <AttendanceList ravisabhaId={ravisabhaId || undefined} />
     </div>
   );
 }

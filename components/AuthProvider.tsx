@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('user', JSON.stringify(userData));
-    router.push('/');
+    router.push('/ravisabha');
   };
 
   const logout = () => {

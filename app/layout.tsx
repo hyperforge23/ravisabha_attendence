@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AttendanceProvider } from "@/components/AttendanceProvider";
@@ -22,15 +23,17 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
-          <AttendanceProvider>
-            <div className="min-h-screen bg-gray-50 text-gray-900">
-              <Navbar />
-              <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
-                {children}
-              </main>
-            </div>
-            <Toaster position="top-right" richColors />
-          </AttendanceProvider>
+          <Suspense fallback={<div>Loading...</div>}>
+            <AttendanceProvider>
+              <div className="min-h-screen bg-gray-50 text-gray-900">
+                <Navbar />
+                <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+                  {children}
+                </main>
+              </div>
+              <Toaster position="top-right" richColors />
+            </AttendanceProvider>
+          </Suspense>
         </AuthProvider>
       </body>
     </html>
