@@ -18,6 +18,11 @@ export default function Home() {
     setSelectionKey((prev) => prev + 1);
   };
 
+  const handleUserUpdated = (updatedUser: User) => {
+    setSelectedUser(updatedUser);
+    setSelectionKey((prev) => prev + 1);
+  };
+
   return (
     <div className="space-y-8">
       <SearchSection onSelectUser={handleSelectUser} />
@@ -27,6 +32,7 @@ export default function Home() {
         user={selectedUser}
         ravisabhaId={ravisabhaId || undefined}
         onClear={() => setSelectedUser(null)}
+        onUserUpdated={handleUserUpdated}
       />
 
       <AttendanceList ravisabhaId={ravisabhaId || undefined} />

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, UserPlus } from 'lucide-react';
 import { User } from '@/lib/types';
 import axios from 'axios';
+import AddUserModal from './AddUserModal';
 
 interface SearchSectionProps {
   onSelectUser: (user: User) => void;
@@ -18,6 +19,8 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialFirstName, setInitialFirstName] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -60,6 +63,18 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
     setActiveIndex(-1);
   };
 
+  const handleAddNewUser = (searchQuery?: string) => {
+    setInitialFirstName(searchQuery || '');
+    setIsModalOpen(true);
+    setIsFocused(false);
+  };
+
+  const handleUserAdded = (user: User) => {
+    onSelectUser(user);
+    setQuery('');
+    setResults([]);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!results.length) return;
 
@@ -80,8 +95,9 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row">
-      <div className="relative w-full sm:w-48">
+    <>
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="relative w-full sm:w-48">
         <select
           value={searchField}
           onChange={(e) => setSearchField(e.target.value as SearchField)}
@@ -118,7 +134,8 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
             {isLoading ? (
               <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
             ) : results.length > 0 ? (
-              <ul className="max-h-60 overflow-y-auto py-2">
+              <>
+                <ul className="max-h-60 overflow-y-auto py-2">
                 {results.map((user, index) => {
                   const isNameMatch = searchField === 'firstName' || searchField === 'lastName';
                   const isSmkMatch = searchField === 'smkNo';
@@ -151,12 +168,48 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
                   );
                 })}
               </ul>
+              <div className="border-t border-gray-100 px-3 py-2">
+                <button
+                  onClick={() => handleAddNewUser()}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add New User
+                </button>
+              </div>
+            </>
             ) : (
-              <div className="px-4 py-3 text-sm text-gray-500">No users found.</div>
+              <div className="px-4 py-3">
+                <p className="text-sm text-gray-500 mb-3">No users found.</p>
+                <button
+                  onClick={() => handleAddNewUser(searchField === 'firstName' ? query : '')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add New User
+                </button>
+              </div>
             )}
           </div>
         )}
       </div>
+
+      <button
+        onClick={() => handleAddNewUser()}
+        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm sm:w-auto"
+      >
+        <UserPlus className="h-4 w-4" />
+        <span className="hidden sm:inline">Add New User</span>
+        <span className="sm:hidden">Add User</span>
+      </button>
     </div>
+
+    <AddUserModal
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      onUserAdded={handleUserAdded}
+      initialFirstName={initialFirstName}
+    />
+    </>
   );
 }
