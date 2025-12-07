@@ -53,6 +53,7 @@ export async function GET(request: Request) {
     const startDateParam = searchParams.get("startDate");
     const endDateParam = searchParams.get("endDate");
     const ravisabhaId = searchParams.get("ravisabhaId");
+    const smkDetailId = searchParams.get("smkDetailId");
 
     let query: any = {};
 
@@ -64,6 +65,19 @@ export async function GET(request: Request) {
       } else {
         return NextResponse.json(
           { message: "Invalid ravisabhaId format" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Add smkDetailId filter if provided (for filtering by user)
+    if (smkDetailId) {
+      // Convert string to ObjectId for proper querying
+      if (mongoose.Types.ObjectId.isValid(smkDetailId)) {
+        query.smkDetailId = new mongoose.Types.ObjectId(smkDetailId);
+      } else {
+        return NextResponse.json(
+          { message: "Invalid smkDetailId format" },
           { status: 400 }
         );
       }

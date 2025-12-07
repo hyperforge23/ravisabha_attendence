@@ -33,7 +33,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Home', href: '/ravisabha' },
-    { name: 'Export', href: '/export' },
+    { name: 'Reports', href: '/export' },
   ];
 
   return (
