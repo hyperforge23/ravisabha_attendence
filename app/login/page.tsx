@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { Lock, Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -16,24 +17,13 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      const { data } = await axios.post('/api/login', {
+        username,
+        password,
       });
-
-
-      const data = await response.json();
-
-      if (response.ok) {
-        login(data.user);
-      } else {
-        setError(data.message || 'Invalid username or password');
-      }
-    } catch (err) {
-      setError('Something went wrong. Please try again.');
+      login(data.user);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid username or password');
     }
   };
 

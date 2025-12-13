@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IAttendance extends Document {
   smkDetailId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
+  ravisabhaId?: mongoose.Types.ObjectId;
   status: "present" | "absent";
   date: Date;
   SmkId: string;
@@ -20,6 +21,10 @@ const AttendanceSchema: Schema<IAttendance> = new Schema(
       type: Schema.Types.ObjectId,
       ref: "users",
       required: true,
+    },
+    ravisabhaId: {
+      type: Schema.Types.ObjectId,
+      ref: "ravisabha_details",
     },
     name: {
       type: String,
