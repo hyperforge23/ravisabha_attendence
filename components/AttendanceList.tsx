@@ -132,6 +132,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
       result = result.filter(
         (r) =>
           r.user.firstName.toLowerCase().includes(lowerName) ||
+          (r.user.middleName && r.user.middleName.toLowerCase().includes(lowerName)) ||
           r.user.lastName.toLowerCase().includes(lowerName)
       );
     }
@@ -156,8 +157,8 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
 
       switch (sortConfig.key) {
         case 'name':
-          aValue = `${a.user.firstName} ${a.user.lastName}`;
-          bValue = `${b.user.firstName} ${b.user.lastName}`;
+          aValue = `${a.user.firstName} ${a.user.middleName ? `${a.user.middleName} ` : ''}${a.user.lastName}`;
+          bValue = `${b.user.firstName} ${b.user.middleName ? `${b.user.middleName} ` : ''}${b.user.lastName}`;
           break;
         case 'smkNo':
           aValue = a.user.smkNo;
@@ -396,6 +397,9 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
                       <td className="pl-3 pr-1 py-3 font-medium text-gray-900 text-xs md:text-sm md:px-6">
                         <div className="flex flex-col">
                           <span className="truncate max-w-[120px] md:max-w-none">{record.user.firstName}</span>
+                          {record.user.middleName && (
+                            <span className="truncate max-w-[120px] md:max-w-none md:mt-0.5">{record.user.middleName}</span>
+                          )}
                           <span className="truncate max-w-[120px] md:max-w-none md:mt-0.5">{record.user.lastName}</span>
                         </div>
                       </td>

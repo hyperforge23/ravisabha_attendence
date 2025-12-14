@@ -21,47 +21,49 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
 
   const fetchRecords = async () => {
-    try {
-      const params: any = {};
-      
-      if (ravisabhaId) {
-        params.ravisabhaId = ravisabhaId;
-      } else {
-        // If no ravisabhaId, fetch today's records
-        const today = new Date().toISOString().split('T')[0];
-        params.date = today;
-      }
-      
-      const { data } = await axios.get('/api/attendance', { params });
-      
-      // Map DB records to frontend AttendanceRecord type
-      const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
-        id: record._id,
-        user: {
-          id: record.smkDetailId._id,
-          firstName: record.smkDetailId.FirstName,
-          lastName: record.smkDetailId.LastName,
-          smkNo: record.smkDetailId.SmkId,
-          mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-          firstNameGuj: record.smkDetailId.FirstNameGuj,
-          lastNameGuj: record.smkDetailId.LastNameGuj,
-          gender: record.smkDetailId.Gender?.toString(),
-        },
-        status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
-        date: record.date.split('T')[0],
-        time: new Date(record.date).toTimeString().slice(0, 5),
-        timestamp: new Date(record.date).getTime(),
-      }));
+      try {
+        const params: any = {};
+        
+        if (ravisabhaId) {
+          params.ravisabhaId = ravisabhaId;
+        } else {
+          // If no ravisabhaId, fetch today's records
+          const today = new Date().toISOString().split('T')[0];
+          params.date = today;
+        }
+        
+        const { data } = await axios.get('/api/attendance', { params });
+        
+        // Map DB records to frontend AttendanceRecord type
+        const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
+          id: record._id,
+          user: {
+            id: record.smkDetailId._id,
+            firstName: record.smkDetailId.FirstName,
+            middleName: record.smkDetailId.MiddleName,
+            lastName: record.smkDetailId.LastName,
+            smkNo: record.smkDetailId.SmkId,
+            mobileNo: record.smkDetailId.MobileNo?.toString() || '',
+            firstNameGuj: record.smkDetailId.FirstNameGuj,
+            middleNameGuj: record.smkDetailId.MiddleNameGuj,
+            lastNameGuj: record.smkDetailId.LastNameGuj,
+            gender: record.smkDetailId.Gender?.toString(),
+          },
+          status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
+          date: record.date.split('T')[0],
+          time: new Date(record.date).toTimeString().slice(0, 5),
+          timestamp: new Date(record.date).getTime(),
+        }));
 
-      setRecords(mappedRecords);
-    } catch (error) {
-      console.error('Error fetching today records:', error);
-    }
-  };
+        setRecords(mappedRecords);
+      } catch (error) {
+        console.error('Error fetching today records:', error);
+      }
+  }
 
   useEffect(() => {
     fetchRecords();
-  }, [ravisabhaId]);
+}, [ravisabhaId]);
 
   const addRecord = (record: AttendanceRecord) => {
     setRecords((prev) => [record, ...prev]);

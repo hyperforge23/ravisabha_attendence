@@ -129,7 +129,7 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
                         }`}
                       >
                         <span className="font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
+                          {user.firstName} {user.middleName ? `${user.middleName} ` : ''}{user.lastName}
                         </span>
                         
                         <div className="flex items-center gap-2 sm:contents">
