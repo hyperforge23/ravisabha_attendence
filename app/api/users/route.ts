@@ -90,10 +90,12 @@ export async function POST(request: Request) {
     const formattedUser = {
       id: newUser._id.toString(),
       firstName: newUser.FirstName,
+      middleName: newUser.MiddleName,
       lastName: newUser.LastName,
       smkNo: newUser.SmkId,
       mobileNo: newUser.MobileNo ? newUser.MobileNo.toString() : "",
       firstNameGuj: newUser.FirstNameGuj,
+      middleNameGuj: newUser.MiddleNameGuj,
       lastNameGuj: newUser.LastNameGuj,
       gender: newUser.Gender?.toString(),
     };

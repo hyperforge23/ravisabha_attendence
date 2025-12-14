@@ -233,10 +233,12 @@ export default function ExportPage() {
             user: {
               id: record.smkDetailId._id,
               firstName: record.smkDetailId.FirstName,
+              middleName: record.smkDetailId.MiddleName,
               lastName: record.smkDetailId.LastName,
               smkNo: record.smkDetailId.SmkId,
               mobileNo: record.smkDetailId.MobileNo?.toString() || '',
               firstNameGuj: record.smkDetailId.FirstNameGuj,
+              middleNameGuj: record.smkDetailId.MiddleNameGuj,
               lastNameGuj: record.smkDetailId.LastNameGuj,
               gender: record.smkDetailId.Gender?.toString(),
             },
@@ -308,6 +310,7 @@ export default function ExportPage() {
       result = result.filter(
         (r) =>
           r.user.firstName.toLowerCase().includes(lowerName) ||
+          (r.user.middleName && r.user.middleName.toLowerCase().includes(lowerName)) ||
           r.user.lastName.toLowerCase().includes(lowerName)
       );
     }
@@ -332,8 +335,8 @@ export default function ExportPage() {
 
       switch (sortConfig.key) {
         case 'name':
-          aValue = `${a.user.firstName} ${a.user.lastName}`;
-          bValue = `${b.user.firstName} ${b.user.lastName}`;
+          aValue = `${a.user.firstName} ${a.user.middleName ? `${a.user.middleName} ` : ''}${a.user.lastName}`;
+          bValue = `${b.user.firstName} ${b.user.middleName ? `${b.user.middleName} ` : ''}${b.user.lastName}`;
           break;
         case 'smkNo':
           aValue = a.user.smkNo;
@@ -860,7 +863,7 @@ export default function ExportPage() {
                   <tr key={record.id} className="hover:bg-gray-50/50">
                     <td className="px-4 py-4 font-medium text-gray-900 sm:px-6">
                       <div className="flex flex-col">
-                        <span>{record.user.firstName} {record.user.lastName}</span>
+                        <span>{record.user.firstName} {record.user.middleName ? `${record.user.middleName} ` : ''}{record.user.lastName}</span>
                         <span className="text-xs text-gray-400 md:hidden">SMK: {record.user.smkNo}</span>
                       </div>
                     </td>

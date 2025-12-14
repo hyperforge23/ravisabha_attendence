@@ -40,10 +40,12 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
           user: {
             id: record.smkDetailId._id,
             firstName: record.smkDetailId.FirstName,
+            middleName: record.smkDetailId.MiddleName,
             lastName: record.smkDetailId.LastName,
             smkNo: record.smkDetailId.SmkId,
             mobileNo: record.smkDetailId.MobileNo?.toString() || '',
             firstNameGuj: record.smkDetailId.FirstNameGuj,
+            middleNameGuj: record.smkDetailId.MiddleNameGuj,
             lastNameGuj: record.smkDetailId.LastNameGuj,
             gender: record.smkDetailId.Gender?.toString(),
           },
