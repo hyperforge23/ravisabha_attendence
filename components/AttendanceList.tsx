@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useAttendance } from '@/components/AttendanceProvider';
 import { cn, formatTo12Hour } from '@/lib/utils';
-import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, Trash2, RotateCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { AttendanceRecord } from '@/lib/types';
 import axios from 'axios';
@@ -63,7 +63,20 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     status: 'All',
   });
 
-  const { records, removeRecord } = useAttendance();
+  const { records, removeRecord, refreshRecords } = useAttendance();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshRecords();
+      toast.success('Records refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh records');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // ... (delete logic is already there)
 
@@ -220,12 +233,23 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           </div>
           
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md">
-              <span>Male: <span className="font-medium text-gray-900">{genderCounts.male}</span></span>
-              <span className="text-gray-300">|</span>
-              <span>Female: <span className="font-medium text-gray-900">{genderCounts.female}</span></span>
-              <span className="text-gray-300">|</span>
-              <span>Total: <span className="font-medium text-gray-900">{genderCounts.total}</span></span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
+                <span>Male: <span className="font-medium text-gray-900">{genderCounts.male}</span></span>
+                <span className="text-gray-300">|</span>
+                <span>Female: <span className="font-medium text-gray-900">{genderCounts.female}</span></span>
+                <span className="text-gray-300">|</span>
+                <span>Total: <span className="font-medium text-gray-900">{genderCounts.total}</span></span>
+              </div>
+              <button 
+                onClick={handleRefresh} 
+                disabled={isRefreshing}
+                className="flex h-8 items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 shadow-sm"
+                title="Refresh Records"
+              >
+                <RotateCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+                <span>Refresh</span>
+              </button>
             </div>
 
             {hasActiveFilters && (

@@ -10,6 +10,7 @@ interface AttendanceContextType {
   addRecord: (record: AttendanceRecord) => void;
   updateRecordStatus: (id: string, status: AttendanceStatus) => void;
   removeRecord: (id: string) => void;
+  refreshRecords: () => Promise<void>;
 }
 
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
@@ -19,8 +20,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   const ravisabhaId = searchParams?.get('ravisabhaId');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
 
-  useEffect(() => {
-    const fetchRecords = async () => {
+  const fetchRecords = async () => {
       try {
         const params: any = {};
         
@@ -59,10 +59,11 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Error fetching today records:', error);
       }
-    };
+  }
 
+  useEffect(() => {
     fetchRecords();
-  }, [ravisabhaId]);
+}, [ravisabhaId]);
 
   const addRecord = (record: AttendanceRecord) => {
     setRecords((prev) => [record, ...prev]);
@@ -79,7 +80,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AttendanceContext.Provider value={{ records, addRecord, updateRecordStatus, removeRecord }}>
+    <AttendanceContext.Provider value={{ records, addRecord, updateRecordStatus, removeRecord, refreshRecords: fetchRecords }}>
       {children}
     </AttendanceContext.Provider>
   );
