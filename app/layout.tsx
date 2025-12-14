@@ -31,7 +31,7 @@ export default function RootLayout({
                   {children}
                 </main>
               </div>
-              <Toaster position="top-right" richColors />
+              <Toaster position="top-right" duration={1500} richColors />
             </AttendanceProvider>
           </Suspense>
         </AuthProvider>
