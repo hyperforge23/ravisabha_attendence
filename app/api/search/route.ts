@@ -9,54 +9,35 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
-    const field = searchParams.get('field');
 
-    if (!query || !field) {
+    if (!query) {
       return NextResponse.json({ users: [] });
     }
 
-    let dbQuery = {};
-    let aggregationPipeline: PipelineStage[] = [];
+    // Search across all fields using $or operator
+    // For mobileNo, we need to use aggregation to convert to string for regex search
+    const aggregationPipeline: PipelineStage[] = [
+      {
+        $addFields: {
+          mobileStr: { $toString: "$MobileNo" }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { FirstName: { $regex: query, $options: 'i' } },
+            { LastName: { $regex: query, $options: 'i' } },
+            { SmkId: { $regex: query, $options: 'i' } },
+            { mobileStr: { $regex: query, $options: 'i' } }
+          ]
+        }
+      },
+      {
+        $limit: 10 // Limit results for performance
+      }
+    ];
 
-    // Map frontend field names to DB field names
-    switch (field) {
-      case 'firstName':
-        dbQuery = { FirstName: { $regex: query, $options: 'i' } };
-        break;
-      case 'lastName':
-        dbQuery = { LastName: { $regex: query, $options: 'i' } };
-        break;
-      case 'smkNo':
-        dbQuery = { SmkId: { $regex: query, $options: 'i' } };
-        break;
-      case 'mobileNo':
-        // For numeric MobileNo, we need aggregation to convert to string for regex search
-        aggregationPipeline = [
-          {
-            $addFields: {
-              mobileStr: { $toString: "$MobileNo" }
-            }
-          },
-          {
-            $match: {
-              mobileStr: { $regex: query, $options: 'i' }
-            }
-          },
-          {
-            $limit: 10 // Limit results for performance
-          }
-        ];
-        break;
-      default:
-        return NextResponse.json({ users: [] });
-    }
-
-    let users;
-    if (field === 'mobileNo') {
-      users = await SmkDetail.aggregate(aggregationPipeline);
-    } else {
-      users = await SmkDetail.find(dbQuery).limit(10);
-    }
+    const users = await SmkDetail.aggregate(aggregationPipeline);
 
     // Map DB result to frontend User interface
     const formattedUsers = users.map((user: any) => ({

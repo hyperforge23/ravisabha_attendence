@@ -1,19 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, ChevronDown, UserPlus } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
 import { User } from '@/lib/types';
 import axios from 'axios';
 import AddUserModal from './AddUserModal';
 
 interface SearchSectionProps {
   onSelectUser: (user: User) => void;
+  showAddUser?: boolean;
 }
 
-type SearchField = 'firstName' | 'lastName' | 'smkNo' | 'mobileNo';
-
-export default function SearchSection({ onSelectUser }: SearchSectionProps) {
-  const [searchField, setSearchField] = useState<SearchField>('firstName');
+export default function SearchSection({ onSelectUser, showAddUser = true }: SearchSectionProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -34,7 +32,6 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
         const { data } = await axios.get('/api/search', {
           params: {
             query,
-            field: searchField,
           },
         });
         setResults(data.users);
@@ -49,7 +46,7 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
     const debounceTimer = setTimeout(fetchUsers, 300);
 
     return () => clearTimeout(debounceTimer);
-  }, [query, searchField]);
+  }, [query]);
 
   useEffect(() => {
     setActiveIndex(-1);
@@ -97,119 +94,107 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
   return (
     <>
       <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="relative w-full sm:w-48">
-        <select
-          value={searchField}
-          onChange={(e) => setSearchField(e.target.value as SearchField)}
-          className="w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-        >
-          <option value="firstName">First Name</option>
-          <option value="lastName">Last Name</option>
-          <option value="smkNo">SMK No</option>
-          <option value="mobileNo">Mobile No</option>
-        </select>
-        <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
-      </div>
+        <div className="relative flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, SMK no, or mobile no..."
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIsFocused(true);
+              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+              onKeyDown={handleKeyDown}
+              className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+            />
+          </div>
 
-      <div className="relative flex-1">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder={`Search by ${searchField}...`}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setIsFocused(true);
-            }}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-            onKeyDown={handleKeyDown}
-            className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-          />
+          {isFocused && query && (
+            <div className="absolute top-full mt-2 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg z-10">
+              {isLoading ? (
+                <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+              ) : results.length > 0 ? (
+                <>
+                  <ul className="max-h-60 overflow-y-auto py-2">
+                    {results.map((user, index) => (
+                      <li
+                        key={user.id}
+                        onClick={() => handleSelect(user)}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
+                          index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
+                        </span>
+                        
+                        <div className="flex items-center gap-2 sm:contents">
+                          <span className="text-gray-300 hidden sm:block">|</span>
+                          <span className="whitespace-nowrap text-gray-500">
+                            {user.smkNo}
+                          </span>
+                          <span className="text-gray-300 hidden sm:block">|</span>
+                          <span className="whitespace-nowrap text-gray-500">
+                            {user.mobileNo}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {showAddUser && (
+                    <div className="border-t border-gray-100 px-3 py-2">
+                      <button
+                        onClick={() => handleAddNewUser()}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Add New User
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="px-4 py-3">
+                  <p className="text-sm text-gray-500 mb-3">No users found.</p>
+                  {showAddUser && (
+                    <button
+                      onClick={() => handleAddNewUser(query)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Add New User
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {isFocused && query && (
-          <div className="absolute top-full mt-2 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg z-10">
-            {isLoading ? (
-              <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
-            ) : results.length > 0 ? (
-              <>
-                <ul className="max-h-60 overflow-y-auto py-2">
-                {results.map((user, index) => {
-                  const isNameMatch = searchField === 'firstName' || searchField === 'lastName';
-                  const isSmkMatch = searchField === 'smkNo';
-                  const isMobileMatch = searchField === 'mobileNo';
-
-                  return (
-                    <li
-                      key={user.id}
-                      onClick={() => handleSelect(user)}
-                      onMouseEnter={() => setActiveIndex(index)}
-                      className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
-                        index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className={`${isNameMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
-                        {user.firstName} {user.lastName}
-                      </span>
-                      
-                      <div className="flex items-center gap-2 sm:contents">
-                        <span className="text-gray-300 hidden sm:block">|</span>
-                        <span className={`whitespace-nowrap ${isSmkMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
-                          {user.smkNo}
-                        </span>
-                        <span className="text-gray-300 hidden sm:block">|</span>
-                        <span className={`whitespace-nowrap ${isMobileMatch ? "font-bold text-gray-900" : "text-gray-500"}`}>
-                          {user.mobileNo}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="border-t border-gray-100 px-3 py-2">
-                <button
-                  onClick={() => handleAddNewUser()}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Add New User
-                </button>
-              </div>
-            </>
-            ) : (
-              <div className="px-4 py-3">
-                <p className="text-sm text-gray-500 mb-3">No users found.</p>
-                <button
-                  onClick={() => handleAddNewUser(searchField === 'firstName' ? query : '')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Add New User
-                </button>
-              </div>
-            )}
-          </div>
+        {showAddUser && (
+          <button
+            onClick={() => handleAddNewUser()}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm sm:w-auto"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add New User</span>
+            <span className="sm:hidden">Add User</span>
+          </button>
         )}
       </div>
 
-      <button
-        onClick={() => handleAddNewUser()}
-        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm sm:w-auto"
-      >
-        <UserPlus className="h-4 w-4" />
-        <span className="hidden sm:inline">Add New User</span>
-        <span className="sm:hidden">Add User</span>
-      </button>
-    </div>
-
-    <AddUserModal
-      isOpen={isModalOpen}
-      onClose={() => setIsModalOpen(false)}
-      onUserAdded={handleUserAdded}
-      initialFirstName={initialFirstName}
-    />
+      {showAddUser && (
+        <AddUserModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onUserAdded={handleUserAdded}
+          initialFirstName={initialFirstName}
+        />
+      )}
     </>
   );
 }
