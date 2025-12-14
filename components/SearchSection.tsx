@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
+import { Search, UserPlus } from 'lucide-react';
 import { User } from '@/lib/types';
 import axios from 'axios';
+import AddUserModal from './AddUserModal';
 
 interface SearchSectionProps {
   onSelectUser: (user: User) => void;
@@ -15,6 +16,8 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialFirstName, setInitialFirstName] = useState('');
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -56,6 +59,18 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
     setActiveIndex(-1);
   };
 
+  const handleAddNewUser = (searchQuery?: string) => {
+    setInitialFirstName(searchQuery || '');
+    setIsModalOpen(true);
+    setIsFocused(false);
+  };
+
+  const handleUserAdded = (user: User) => {
+    onSelectUser(user);
+    setQuery('');
+    setResults([]);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!results.length) return;
 
@@ -76,61 +91,101 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
   };
 
   return (
-    <div className="relative">
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by name, SMK no, or mobile no..."
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setIsFocused(true);
-          }}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-          onKeyDown={handleKeyDown}
-          className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-        />
-      </div>
+    <>
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <div className="relative flex-1">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name, SMK no, or mobile no..."
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIsFocused(true);
+              }}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+              onKeyDown={handleKeyDown}
+              className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+            />
+          </div>
 
-      {isFocused && query && (
-        <div className="absolute top-full mt-2 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg z-10">
-          {isLoading ? (
-            <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
-          ) : results.length > 0 ? (
-            <ul className="max-h-60 overflow-y-auto py-2">
-              {results.map((user, index) => (
-                <li
-                  key={user.id}
-                  onClick={() => handleSelect(user)}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
-                    index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="font-medium text-gray-900">
-                    {user.firstName} {user.lastName}
-                  </span>
-                  
-                  <div className="flex items-center gap-2 sm:contents">
-                    <span className="text-gray-300 hidden sm:block">|</span>
-                    <span className="whitespace-nowrap text-gray-500">
-                      {user.smkNo}
-                    </span>
-                    <span className="text-gray-300 hidden sm:block">|</span>
-                    <span className="whitespace-nowrap text-gray-500">
-                      {user.mobileNo}
-                    </span>
+          {isFocused && query && (
+            <div className="absolute top-full mt-2 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg z-10">
+              {isLoading ? (
+                <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+              ) : results.length > 0 ? (
+                <>
+                  <ul className="max-h-60 overflow-y-auto py-2">
+                    {results.map((user, index) => (
+                      <li
+                        key={user.id}
+                        onClick={() => handleSelect(user)}
+                        onMouseEnter={() => setActiveIndex(index)}
+                        className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
+                          index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
+                        </span>
+                        
+                        <div className="flex items-center gap-2 sm:contents">
+                          <span className="text-gray-300 hidden sm:block">|</span>
+                          <span className="whitespace-nowrap text-gray-500">
+                            {user.smkNo}
+                          </span>
+                          <span className="text-gray-300 hidden sm:block">|</span>
+                          <span className="whitespace-nowrap text-gray-500">
+                            {user.mobileNo}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="border-t border-gray-100 px-3 py-2">
+                    <button
+                      onClick={() => handleAddNewUser()}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Add New User
+                    </button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="px-4 py-3 text-sm text-gray-500">No users found.</div>
+                </>
+              ) : (
+                <div className="px-4 py-3">
+                  <p className="text-sm text-gray-500 mb-3">No users found.</p>
+                  <button
+                    onClick={() => handleAddNewUser(query)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add New User
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
-      )}
-    </div>
+
+        <button
+          onClick={() => handleAddNewUser()}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm sm:w-auto"
+        >
+          <UserPlus className="h-4 w-4" />
+          <span className="hidden sm:inline">Add New User</span>
+          <span className="sm:hidden">Add User</span>
+        </button>
+      </div>
+
+      <AddUserModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onUserAdded={handleUserAdded}
+        initialFirstName={initialFirstName}
+      />
+    </>
   );
 }
