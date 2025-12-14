@@ -10,6 +10,7 @@ interface AttendanceContextType {
   addRecord: (record: AttendanceRecord) => void;
   updateRecordStatus: (id: string, status: AttendanceStatus) => void;
   removeRecord: (id: string) => void;
+  refreshRecords: () => Promise<void>;
 }
 
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
@@ -19,46 +20,46 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   const ravisabhaId = searchParams?.get('ravisabhaId');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
 
-  useEffect(() => {
-    const fetchRecords = async () => {
-      try {
-        const params: any = {};
-        
-        if (ravisabhaId) {
-          params.ravisabhaId = ravisabhaId;
-        } else {
-          // If no ravisabhaId, fetch today's records
-          const today = new Date().toISOString().split('T')[0];
-          params.date = today;
-        }
-        
-        const { data } = await axios.get('/api/attendance', { params });
-        
-        // Map DB records to frontend AttendanceRecord type
-        const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
-          id: record._id,
-          user: {
-            id: record.smkDetailId._id,
-            firstName: record.smkDetailId.FirstName,
-            lastName: record.smkDetailId.LastName,
-            smkNo: record.smkDetailId.SmkId,
-            mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-            firstNameGuj: record.smkDetailId.FirstNameGuj,
-            lastNameGuj: record.smkDetailId.LastNameGuj,
-            gender: record.smkDetailId.Gender?.toString(),
-          },
-          status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
-          date: record.date.split('T')[0],
-          time: new Date(record.date).toTimeString().slice(0, 5),
-          timestamp: new Date(record.date).getTime(),
-        }));
-
-        setRecords(mappedRecords);
-      } catch (error) {
-        console.error('Error fetching today records:', error);
+  const fetchRecords = async () => {
+    try {
+      const params: any = {};
+      
+      if (ravisabhaId) {
+        params.ravisabhaId = ravisabhaId;
+      } else {
+        // If no ravisabhaId, fetch today's records
+        const today = new Date().toISOString().split('T')[0];
+        params.date = today;
       }
-    };
+      
+      const { data } = await axios.get('/api/attendance', { params });
+      
+      // Map DB records to frontend AttendanceRecord type
+      const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
+        id: record._id,
+        user: {
+          id: record.smkDetailId._id,
+          firstName: record.smkDetailId.FirstName,
+          lastName: record.smkDetailId.LastName,
+          smkNo: record.smkDetailId.SmkId,
+          mobileNo: record.smkDetailId.MobileNo?.toString() || '',
+          firstNameGuj: record.smkDetailId.FirstNameGuj,
+          lastNameGuj: record.smkDetailId.LastNameGuj,
+          gender: record.smkDetailId.Gender?.toString(),
+        },
+        status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
+        date: record.date.split('T')[0],
+        time: new Date(record.date).toTimeString().slice(0, 5),
+        timestamp: new Date(record.date).getTime(),
+      }));
 
+      setRecords(mappedRecords);
+    } catch (error) {
+      console.error('Error fetching today records:', error);
+    }
+  };
+
+  useEffect(() => {
     fetchRecords();
   }, [ravisabhaId]);
 
@@ -77,7 +78,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AttendanceContext.Provider value={{ records, addRecord, updateRecordStatus, removeRecord }}>
+    <AttendanceContext.Provider value={{ records, addRecord, updateRecordStatus, removeRecord, refreshRecords: fetchRecords }}>
       {children}
     </AttendanceContext.Provider>
   );
