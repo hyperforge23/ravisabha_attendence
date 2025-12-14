@@ -611,7 +611,7 @@ export default function ExportPage() {
                   {/* Person Search Section */}
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Search by Person</label>
-                    <SearchSection onSelectUser={(user) => setSelectedPerson(user)} />
+                    <SearchSection onSelectUser={(user) => setSelectedPerson(user)} showAddUser={false} />
                     
                     {selectedPerson && (
                       <div className="mt-3 flex items-center gap-2">

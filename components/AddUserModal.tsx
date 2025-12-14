@@ -274,7 +274,7 @@ export default function AddUserModal({
                 />
               </div>
 
-              <div className="sm:col-span-2">
+              {/* <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   SMK No <span className="text-gray-500 text-xs">(Optional - Auto-generated if empty)</span>
                 </label>
@@ -289,7 +289,7 @@ export default function AddUserModal({
                 <p className="mt-1 text-xs text-gray-500">
                   Format: Non_[FirstInitial][MiddleInitial][LastInitial]_[DDMMYYYY]
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
 

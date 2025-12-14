@@ -8,9 +8,10 @@ import AddUserModal from './AddUserModal';
 
 interface SearchSectionProps {
   onSelectUser: (user: User) => void;
+  showAddUser?: boolean;
 }
 
-export default function SearchSection({ onSelectUser }: SearchSectionProps) {
+export default function SearchSection({ onSelectUser, showAddUser = true }: SearchSectionProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -144,48 +145,56 @@ export default function SearchSection({ onSelectUser }: SearchSectionProps) {
                       </li>
                     ))}
                   </ul>
-                  <div className="border-t border-gray-100 px-3 py-2">
-                    <button
-                      onClick={() => handleAddNewUser()}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Add New User
-                    </button>
-                  </div>
+                  {showAddUser && (
+                    <div className="border-t border-gray-100 px-3 py-2">
+                      <button
+                        onClick={() => handleAddNewUser()}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Add New User
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="px-4 py-3">
                   <p className="text-sm text-gray-500 mb-3">No users found.</p>
-                  <button
-                    onClick={() => handleAddNewUser(query)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Add New User
-                  </button>
+                  {showAddUser && (
+                    <button
+                      onClick={() => handleAddNewUser(query)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Add New User
+                    </button>
+                  )}
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <button
-          onClick={() => handleAddNewUser()}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm sm:w-auto"
-        >
-          <UserPlus className="h-4 w-4" />
-          <span className="hidden sm:inline">Add New User</span>
-          <span className="sm:hidden">Add User</span>
-        </button>
+        {showAddUser && (
+          <button
+            onClick={() => handleAddNewUser()}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm sm:w-auto"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add New User</span>
+            <span className="sm:hidden">Add User</span>
+          </button>
+        )}
       </div>
 
-      <AddUserModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onUserAdded={handleUserAdded}
-        initialFirstName={initialFirstName}
-      />
+      {showAddUser && (
+        <AddUserModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onUserAdded={handleUserAdded}
+          initialFirstName={initialFirstName}
+        />
+      )}
     </>
   );
 }
