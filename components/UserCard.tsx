@@ -22,7 +22,7 @@ export default function UserCard({
   onClear,
   onUserUpdated,
 }: UserCardProps) {
-  const { addRecord, records } = useAttendance();
+  const { refreshRecords, records } = useAttendance();
   const { user: authUser } = useAuth();
 
   const [date, setDate] = useState('');
@@ -52,7 +52,7 @@ export default function UserCard({
 
     setIsSubmitting(true);
     try {
-      const { data } = await axios.post('/api/attendance', {
+      await axios.post('/api/attendance', {
         smkDetailId: user.id,
         userId: authUser.id,
         ravisabhaId: ravisabhaId || undefined,
@@ -62,14 +62,7 @@ export default function UserCard({
         date: new Date(`${date}T${time}`),
       });
 
-      addRecord({
-        id: data.attendance._id,
-        user,
-        status: 'Present',
-        date,
-        time,
-        timestamp: new Date(`${date}T${time}`).getTime(),
-      });
+      await refreshRecords();
 
       toast.success('Attendance marked');
       onClear();

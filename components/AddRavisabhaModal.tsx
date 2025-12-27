@@ -5,6 +5,7 @@ import { X, Calendar, FileText } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { formatIndianCurrency, parseIndianCurrency } from '@/lib/utils';
+import { User } from '@/lib/types';
 
 interface Ravisabha {
   _id: string;
@@ -29,6 +30,39 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   const [yajman, setYajman] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Search State
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (!yajman || yajman.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const { data } = await axios.get('/api/search', {
+          params: {
+            query: yajman,
+            field: 'anyName',
+          },
+        });
+        setSearchResults(data.users);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchUsers, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [yajman]);
 
   const isEditMode = !!ravisabha;
 
@@ -178,17 +212,50 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative z-20">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Yajman</label>
             <div className="relative">
               <FileText className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 value={yajman}
-                onChange={(e) => setYajman(e.target.value)}
+                onChange={(e) => {
+                  setYajman(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
                 placeholder="Enter Yajman name"
                 className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black"
+                autoComplete="off"
               />
+              
+              {showDropdown && yajman && (searchResults.length > 0 || isSearching) && (
+                <div className="absolute top-full mt-1 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg">
+                  {isSearching ? (
+                    <div className="px-4 py-2 text-xs text-gray-500">Searching...</div>
+                  ) : (
+                    <ul className="max-h-48 overflow-y-auto py-1">
+                      {searchResults.map((user) => (
+                        <li
+                          key={user.id}
+                          onClick={() => {
+                            setYajman(`${user.firstName} ${user.lastName}`);
+                            setShowDropdown(false);
+                          }}
+                          className="cursor-pointer px-3 py-2 text-sm hover:bg-gray-50"
+                        >
+                          <span className="font-medium text-gray-900">
+                            {user.firstName} {user.lastName}
+                          </span>
+                          <span className="ml-2 text-xs text-gray-500">
+                            ({user.smkNo})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

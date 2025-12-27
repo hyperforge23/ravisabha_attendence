@@ -2,14 +2,16 @@ import { AttendanceRecord } from './types';
 import { formatTo12Hour } from './utils';
 
 export const downloadCSV = (records: AttendanceRecord[]) => {
-  const headers = ['First Name', 'Last Name', 'SMK No', 'Mobile No', 'Status', 'Date', 'Time'];
+  const headers = ['First Name', 'Middle Name', 'Last Name', 'SMK No', 'Mobile No', 'Status', 'Date', 'Gender', 'Time'];
   const rows = records.map((record) => [
     record.user.firstName,
+    record.user.middleName,
     record.user.lastName,
     record.user.smkNo,
     record.user.mobileNo,
     record.status,
     record.date,
+    record.user.gender === '1' ? 'Male' : 'Female',
     formatTo12Hour(record.time),
   ]);
 
