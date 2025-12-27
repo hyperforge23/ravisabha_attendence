@@ -111,10 +111,12 @@ export async function PUT(
     const formattedUser = {
       id: updatedUser._id.toString(),
       firstName: updatedUser.FirstName,
+      middleName: updatedUser.MiddleName,
       lastName: updatedUser.LastName,
       smkNo: updatedUser.SmkId,
       mobileNo: updatedUser.MobileNo ? updatedUser.MobileNo.toString() : "",
       firstNameGuj: updatedUser.FirstNameGuj,
+      middleNameGuj: updatedUser.MiddleNameGuj,
       lastNameGuj: updatedUser.LastNameGuj,
       gender: updatedUser.Gender?.toString(),
     };

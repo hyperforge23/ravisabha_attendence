@@ -9,14 +9,34 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('query');
-    const field = searchParams.get('field');
 
-    if (!query || !field) {
+    if (!query) {
       return NextResponse.json({ users: [] });
     }
 
-    let dbQuery = {};
-    let aggregationPipeline: PipelineStage[] = [];
+    // Search across all fields using $or operator
+    // For mobileNo, we need to use aggregation to convert to string for regex search
+    const aggregationPipeline: PipelineStage[] = [
+      {
+        $addFields: {
+          mobileStr: { $toString: "$MobileNo" }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { FirstName: { $regex: query, $options: 'i' } },
+            { MiddleName: { $regex: query, $options: 'i' } },
+            { LastName: { $regex: query, $options: 'i' } },
+            { SmkId: { $regex: query, $options: 'i' } },
+            { mobileStr: { $regex: query, $options: 'i' } }
+          ]
+        }
+      },
+      {
+        $limit: 10 // Limit results for performance
+      }
+    ];
 
     // Map frontend field names to DB field names
     switch (field) {
@@ -70,10 +90,12 @@ export async function GET(request: Request) {
     const formattedUsers = users.map((user: any) => ({
       id: user._id.toString(),
       firstName: user.FirstName,
+      middleName: user.MiddleName,
       lastName: user.LastName,
       smkNo: user.SmkId,
       mobileNo: user.MobileNo ? user.MobileNo.toString() : '',
       firstNameGuj: user.FirstNameGuj,
+      middleNameGuj: user.MiddleNameGuj,
       lastNameGuj: user.LastNameGuj,
       gender: user.Gender?.toString(),
     }));

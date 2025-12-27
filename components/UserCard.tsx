@@ -57,7 +57,7 @@ export default function UserCard({
         userId: authUser.id,
         ravisabhaId: ravisabhaId || undefined,
         SmkId: user.smkNo,
-        name: `${user.firstName} ${user.lastName}`,
+        name: `${user.firstName} ${user.middleName ? `${user.middleName} ` : ''}${user.lastName}`,
         status: 'present',
         date: new Date(`${date}T${time}`),
       });
@@ -110,10 +110,10 @@ export default function UserCard({
           {user ? (
             <>
               <h3 className="text-lg font-semibold text-gray-900">
-                {user.firstName} {user.lastName}
-                {user.firstNameGuj && user.lastNameGuj && (
+                {user.firstName} {user.middleName ? `${user.middleName} ` : ''}{user.lastName}
+                {(user.firstNameGuj || user.middleNameGuj || user.lastNameGuj) && (
                   <span className="ml-2 font-normal text-gray-500">
-                    ({user.firstNameGuj} {user.lastNameGuj})
+                    ({user.firstNameGuj || ''} {user.middleNameGuj ? `${user.middleNameGuj} ` : ''}{user.lastNameGuj || ''})
                   </span>
                 )}
               </h3>
