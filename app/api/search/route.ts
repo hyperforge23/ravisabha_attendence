@@ -26,6 +26,14 @@ export async function GET(request: Request) {
       case 'lastName':
         dbQuery = { LastName: { $regex: query, $options: 'i' } };
         break;
+      case 'anyName':
+        dbQuery = {
+          $or: [
+            { FirstName: { $regex: query, $options: 'i' } },
+            { LastName: { $regex: query, $options: 'i' } },
+          ],
+        };
+        break;
       case 'smkNo':
         dbQuery = { SmkId: { $regex: query, $options: 'i' } };
         break;

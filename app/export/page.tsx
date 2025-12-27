@@ -233,6 +233,7 @@ export default function ExportPage() {
             user: {
               id: record.smkDetailId._id,
               firstName: record.smkDetailId.FirstName,
+              middleName: record.smkDetailId.MiddleName,
               lastName: record.smkDetailId.LastName,
               smkNo: record.smkDetailId.SmkId,
               mobileNo: record.smkDetailId.MobileNo?.toString() || '',

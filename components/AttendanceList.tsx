@@ -65,14 +65,26 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
 
   const { records, removeRecord, refreshRecords } = useAttendance();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [serverCounts, setServerCounts] = useState<{ male: number; female: number; total: number } | null>(null);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refreshRecords();
-      toast.success('Records refreshed');
+      // Get current context (ravisabhaId or date)
+      const params: any = {};
+      if (ravisabhaId) {
+        params.ravisabhaId = ravisabhaId;
+      } else {
+        const today = new Date().toISOString().split('T')[0];
+        params.date = today;
+      }
+
+      const { data } = await axios.get('/api/attendance/stats', { params });
+      setServerCounts(data);
+      toast.success('Counts refreshed');
     } catch (error) {
-      toast.error('Failed to refresh records');
+      console.error('Error refreshing counts:', error);
+      toast.error('Failed to refresh counts');
     } finally {
       setIsRefreshing(false);
     }
@@ -105,6 +117,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     });
     setVisibleFilters({});
     setSortConfig({ key: 'dateTime', direction: 'desc' });
+    setServerCounts(null); // Clear server counts on filter clear to show derived counts
   };
 
   const hasActiveFilters = useMemo(() => {
@@ -213,6 +226,8 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     return counts;
   }, [filteredAndSortedRecords]);
 
+  const displayCounts = serverCounts || genderCounts;
+
   return (
     <>
       <div className="space-y-4">
@@ -234,21 +249,23 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
-                <span>Male: <span className="font-medium text-gray-900">{genderCounts.male}</span></span>
+                <span>Male: <span className="font-medium text-gray-900">{displayCounts.male}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Female: <span className="font-medium text-gray-900">{genderCounts.female}</span></span>
+                <span>Female: <span className="font-medium text-gray-900">{displayCounts.female}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Total: <span className="font-medium text-gray-900">{genderCounts.total}</span></span>
+                <span>Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
               </div>
               <button 
                 onClick={handleRefresh} 
                 disabled={isRefreshing}
                 className="flex h-8 items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 shadow-sm"
-                title="Refresh Records"
+                title="Refresh Counts"
               >
                 <RotateCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
                 <span>Refresh</span>
               </button>
+
+
             </div>
 
             {hasActiveFilters && (
