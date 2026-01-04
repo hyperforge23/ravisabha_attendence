@@ -37,7 +37,7 @@ export default function RavisabhaListPage() {
         params: { month },
       });
       
-      setRavisabhas(data.ravisabhas);
+      setRavisabhas(data.ravisabhas || []);
     } catch (error) {
       console.error('Error fetching ravisabhas:', error);
       toast.error('Failed to load ravisabhas');

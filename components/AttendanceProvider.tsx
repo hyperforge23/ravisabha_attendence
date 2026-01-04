@@ -53,6 +53,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
           date: record.date.split('T')[0],
           time: new Date(record.date).toTimeString().slice(0, 5),
           timestamp: new Date(record.date).getTime(),
+          createdByUsername: record.userId?.UserName || '',
         }));
 
         setRecords(mappedRecords);
@@ -62,6 +63,8 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // Clear records immediately when ravisabhaId changes to prevent showing stale data
+    setRecords([]);
     fetchRecords();
 }, [ravisabhaId]);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAttendance } from '@/components/AttendanceProvider';
 import { cn, formatTo12Hour } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, Trash2, RotateCw } from 'lucide-react';
@@ -66,6 +66,57 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   const { records, removeRecord, refreshRecords } = useAttendance();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [serverCounts, setServerCounts] = useState<{ male: number; female: number; total: number } | null>(null);
+  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+  const prevRecordsLengthRef = useRef<number>(0);
+
+  // Reset counts when ravisabhaId changes
+  useEffect(() => {
+    setServerCounts(null);
+    setIsLoadingCounts(true);
+    prevRecordsLengthRef.current = 0;
+  }, [ravisabhaId]);
+
+  // Update loading state when records are loaded
+  useEffect(() => {
+    // If we have records or if we're not viewing a specific ravisabha (today's view), counts are ready
+    if (records.length > 0 || !ravisabhaId) {
+      setIsLoadingCounts(false);
+    }
+  }, [records.length, ravisabhaId]);
+
+  // Refresh counts from server when records change (after marking attendance)
+  useEffect(() => {
+    // Only refresh if records length actually changed (new record added or removed)
+    if (prevRecordsLengthRef.current === records.length) {
+      return;
+    }
+
+    prevRecordsLengthRef.current = records.length;
+    
+    // Refresh counts from server when records change
+    const refreshCounts = async () => {
+      try {
+        const params: any = {};
+        if (ravisabhaId) {
+          params.ravisabhaId = ravisabhaId;
+        } else {
+          const today = new Date().toISOString().split('T')[0];
+          params.date = today;
+        }
+
+        const { data } = await axios.get('/api/attendance/stats', { params });
+        setServerCounts(data);
+      } catch (error) {
+        console.error('Error refreshing counts:', error);
+        // On error, clear serverCounts to use calculated counts
+        setServerCounts(null);
+      }
+    };
+
+    // Small delay to ensure the API has the latest data
+    const timer = setTimeout(refreshCounts, 100);
+    return () => clearTimeout(timer);
+  }, [records.length, ravisabhaId]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -227,7 +278,11 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     return counts;
   }, [filteredAndSortedRecords]);
 
-  const displayCounts = serverCounts || genderCounts;
+  // Show NA when loading (serverCounts is null and we're waiting for records)
+  // Otherwise show serverCounts if available, or calculated genderCounts
+  const displayCounts = (isLoadingCounts && serverCounts === null && records.length === 0)
+    ? { male: 'NA', female: 'NA', total: 'NA' }
+    : serverCounts || genderCounts;
 
   return (
     <>
@@ -250,11 +305,11 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
-                <span>Male: <span className="font-medium text-gray-900">{displayCounts.male}</span></span>
+                <span>Male: <span className="font-medium text-gray-900">{typeof displayCounts.male === 'string' ? displayCounts.male : displayCounts.male}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Female: <span className="font-medium text-gray-900">{displayCounts.female}</span></span>
+                <span>Female: <span className="font-medium text-gray-900">{typeof displayCounts.female === 'string' ? displayCounts.female : displayCounts.female}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
+                <span>Total: <span className="font-medium text-gray-900">{typeof displayCounts.total === 'string' ? displayCounts.total : displayCounts.total}</span></span>
               </div>
               <button 
                 onClick={handleRefresh} 
