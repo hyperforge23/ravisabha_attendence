@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useAttendance } from '@/components/AttendanceProvider';
 import { cn, formatTo12Hour } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, Trash2, RotateCw } from 'lucide-react';
@@ -67,11 +67,13 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [serverCounts, setServerCounts] = useState<{ male: number; female: number; total: number } | null>(null);
   const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+  const prevRecordsLengthRef = useRef<number>(0);
 
   // Reset counts when ravisabhaId changes
   useEffect(() => {
     setServerCounts(null);
     setIsLoadingCounts(true);
+    prevRecordsLengthRef.current = 0;
   }, [ravisabhaId]);
 
   // Update loading state when records are loaded
@@ -80,6 +82,40 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     if (records.length > 0 || !ravisabhaId) {
       setIsLoadingCounts(false);
     }
+  }, [records.length, ravisabhaId]);
+
+  // Refresh counts from server when records change (after marking attendance)
+  useEffect(() => {
+    // Only refresh if records length actually changed (new record added or removed)
+    if (prevRecordsLengthRef.current === records.length) {
+      return;
+    }
+
+    prevRecordsLengthRef.current = records.length;
+    
+    // Refresh counts from server when records change
+    const refreshCounts = async () => {
+      try {
+        const params: any = {};
+        if (ravisabhaId) {
+          params.ravisabhaId = ravisabhaId;
+        } else {
+          const today = new Date().toISOString().split('T')[0];
+          params.date = today;
+        }
+
+        const { data } = await axios.get('/api/attendance/stats', { params });
+        setServerCounts(data);
+      } catch (error) {
+        console.error('Error refreshing counts:', error);
+        // On error, clear serverCounts to use calculated counts
+        setServerCounts(null);
+      }
+    };
+
+    // Small delay to ensure the API has the latest data
+    const timer = setTimeout(refreshCounts, 100);
+    return () => clearTimeout(timer);
   }, [records.length, ravisabhaId]);
 
   const handleRefresh = async () => {

@@ -122,7 +122,10 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
                     {results.map((user, index) => (
                     <li
                       key={user.id}
-                      onClick={() => handleSelect(user)}
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // Prevent input blur
+                        handleSelect(user);
+                      }}
                       onMouseEnter={() => setActiveIndex(index)}
                       className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
                         index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
@@ -148,7 +151,10 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
                   {showAddUser && (
                     <div className="border-t border-gray-100 px-3 py-2">
                       <button
-                        onClick={() => handleAddNewUser()}
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent input blur
+                          handleAddNewUser();
+                        }}
                         className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       >
                         <UserPlus className="h-4 w-4" />
@@ -162,7 +168,10 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
                   <p className="text-sm text-gray-500 mb-3">No users found.</p>
                   {showAddUser && (
                     <button
-                      onClick={() => handleAddNewUser(query)}
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // Prevent input blur
+                        handleAddNewUser(query);
+                      }}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       <UserPlus className="h-4 w-4" />
