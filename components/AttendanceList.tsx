@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAttendance } from '@/components/AttendanceProvider';
 import { cn, formatTo12Hour } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, Trash2, RotateCw } from 'lucide-react';
@@ -66,6 +66,21 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   const { records, removeRecord, refreshRecords } = useAttendance();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [serverCounts, setServerCounts] = useState<{ male: number; female: number; total: number } | null>(null);
+  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
+
+  // Reset counts when ravisabhaId changes
+  useEffect(() => {
+    setServerCounts(null);
+    setIsLoadingCounts(true);
+  }, [ravisabhaId]);
+
+  // Update loading state when records are loaded
+  useEffect(() => {
+    // If we have records or if we're not viewing a specific ravisabha (today's view), counts are ready
+    if (records.length > 0 || !ravisabhaId) {
+      setIsLoadingCounts(false);
+    }
+  }, [records.length, ravisabhaId]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -227,7 +242,11 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     return counts;
   }, [filteredAndSortedRecords]);
 
-  const displayCounts = serverCounts || genderCounts;
+  // Show NA when loading (serverCounts is null and we're waiting for records)
+  // Otherwise show serverCounts if available, or calculated genderCounts
+  const displayCounts = (isLoadingCounts && serverCounts === null && records.length === 0)
+    ? { male: 'NA', female: 'NA', total: 'NA' }
+    : serverCounts || genderCounts;
 
   return (
     <>
@@ -250,11 +269,11 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
-                <span>Male: <span className="font-medium text-gray-900">{displayCounts.male}</span></span>
+                <span>Male: <span className="font-medium text-gray-900">{typeof displayCounts.male === 'string' ? displayCounts.male : displayCounts.male}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Female: <span className="font-medium text-gray-900">{displayCounts.female}</span></span>
+                <span>Female: <span className="font-medium text-gray-900">{typeof displayCounts.female === 'string' ? displayCounts.female : displayCounts.female}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
+                <span>Total: <span className="font-medium text-gray-900">{typeof displayCounts.total === 'string' ? displayCounts.total : displayCounts.total}</span></span>
               </div>
               <button 
                 onClick={handleRefresh} 

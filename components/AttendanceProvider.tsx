@@ -62,6 +62,8 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // Clear records immediately when ravisabhaId changes to prevent showing stale data
+    setRecords([]);
     fetchRecords();
 }, [ravisabhaId]);
 

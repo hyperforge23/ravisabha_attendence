@@ -12,7 +12,6 @@ interface SearchSectionProps {
 }
 
 export default function SearchSection({ onSelectUser, showAddUser = true }: SearchSectionProps) {
-  const [searchField, setSearchField] = useState<'firstName' | 'lastName' | 'smkNo' | 'mobileNo'>('firstName');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -33,7 +32,6 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
         const { data } = await axios.get('/api/search', {
           params: {
             query,
-            field: searchField,
           },
         });
         setResults(data.users);
@@ -48,7 +46,7 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
     const debounceTimer = setTimeout(fetchUsers, 300);
 
     return () => clearTimeout(debounceTimer);
-  }, [query, searchField]);
+  }, [query]);
 
   useEffect(() => {
     setActiveIndex(-1);
@@ -95,76 +93,58 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:flex-row">
-        <div className="relative w-full sm:w-48">
-          <select
-            value={searchField}
-            onChange={(e) => setSearchField(e.target.value as any)}
-            className="w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-          >
-            <option value="firstName">First Name</option>
-            <option value="lastName">Last Name</option>
-            <option value="smkNo">SMK No</option>
-            <option value="mobileNo">Mobile No</option>
-          </select>
-          <div className="pointer-events-none absolute right-3 top-3 text-gray-400">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-
-        <div className="relative flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+    <div className="flex flex-col gap-4 sm:flex-row">
+      <div className="relative flex-1">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder={`Search by ${searchField}...`}
+              placeholder="Search by name, SMK no, or mobile no..."
               value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setIsFocused(true);
-              }}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-              onKeyDown={handleKeyDown}
-              className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-            />
-          </div>
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsFocused(true);
+            }}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            onKeyDown={handleKeyDown}
+            className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+          />
+        </div>
 
-          {isFocused && query && (
-            <div className="absolute top-full mt-2 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg z-10">
-              {isLoading ? (
-                <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
-              ) : results.length > 0 ? (
+        {isFocused && query && (
+          <div className="absolute top-full mt-2 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg z-10">
+            {isLoading ? (
+              <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+            ) : results.length > 0 ? (
                 <>
-                  <ul className="max-h-60 overflow-y-auto py-2">
+              <ul className="max-h-60 overflow-y-auto py-2">
                     {results.map((user, index) => (
-                      <li
-                        key={user.id}
-                        onClick={() => handleSelect(user)}
-                        onMouseEnter={() => setActiveIndex(index)}
-                        className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
-                          index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
-                        }`}
-                      >
+                    <li
+                      key={user.id}
+                      onClick={() => handleSelect(user)}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
+                        index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
                         <span className="font-medium text-gray-900">
                           {user.firstName} {user.middleName ? `${user.middleName} ` : ''}{user.lastName}
+                      </span>
+                      
+                      <div className="flex items-center gap-2 sm:contents">
+                        <span className="text-gray-300 hidden sm:block">|</span>
+                          <span className="whitespace-nowrap text-gray-500">
+                          {user.smkNo}
                         </span>
-                        
-                        <div className="flex items-center gap-2 sm:contents">
-                          <span className="text-gray-300 hidden sm:block">|</span>
+                        <span className="text-gray-300 hidden sm:block">|</span>
                           <span className="whitespace-nowrap text-gray-500">
-                            {user.smkNo}
-                          </span>
-                          <span className="text-gray-300 hidden sm:block">|</span>
-                          <span className="whitespace-nowrap text-gray-500">
-                            {user.mobileNo}
-                          </span>
-                        </div>
-                      </li>
+                          {user.mobileNo}
+                        </span>
+                      </div>
+                    </li>
                     ))}
-                  </ul>
+              </ul>
                   {showAddUser && (
                     <div className="border-t border-gray-100 px-3 py-2">
                       <button
@@ -192,8 +172,8 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
                 </div>
               )}
             </div>
-          )}
-        </div>
+            )}
+          </div>
 
         {showAddUser && (
           <button
