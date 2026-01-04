@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, UserPlus } from 'lucide-react';
 import { User } from '@/lib/types';
 import axios from 'axios';
@@ -19,6 +19,7 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [initialFirstName, setInitialFirstName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -58,12 +59,20 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
     setResults([]);
     setIsFocused(false);
     setActiveIndex(-1);
+    // Blur input to close mobile keyboard
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
   };
 
   const handleAddNewUser = (searchQuery?: string) => {
     setInitialFirstName(searchQuery || '');
     setIsModalOpen(true);
     setIsFocused(false);
+    // Blur input to close mobile keyboard
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
   };
 
   const handleUserAdded = (user: User) => {
@@ -98,6 +107,7 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
         <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <input
+              ref={inputRef}
               type="text"
               placeholder="Search by name, SMK no, or mobile no..."
               value={query}
