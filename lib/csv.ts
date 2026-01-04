@@ -1,7 +1,7 @@
 import { AttendanceRecord } from './types';
 import { formatTo12Hour } from './utils';
 
-const escapeCSV = (value: string): string => {
+const escapeCSV = (value: string | number | undefined | null): string => {
   if (value === null || value === undefined) return '';
   const stringValue = String(value);
   // If value contains comma, quote, or newline, wrap in quotes and escape quotes
@@ -12,7 +12,7 @@ const escapeCSV = (value: string): string => {
 };
 
 export const downloadCSV = (records: AttendanceRecord[], filename?: string) => {
-  const headers = ['First Name', 'Middle Name', 'Last Name', 'SMK No', 'Mobile No', 'Status', 'Gender', 'Date', 'Time'];
+  const headers = ['First Name', 'Middle Name', 'Last Name', 'SMK No', 'Mobile No', 'Status', 'Gender', 'Date', 'Time', 'Created By'];
   const rows = records.map((record) => [
     escapeCSV(record.user.firstName || ''),
     escapeCSV(record.user.middleName || ''),
@@ -23,6 +23,7 @@ export const downloadCSV = (records: AttendanceRecord[], filename?: string) => {
     escapeCSV(record.user.gender === '1' ? 'Male' : record.user.gender === '2' ? 'Female' : ''),
     escapeCSV(record.date || ''),
     escapeCSV(formatTo12Hour(record.time)),
+    escapeCSV(record.createdByUsername || ''),
   ]);
 
   const csvContent =

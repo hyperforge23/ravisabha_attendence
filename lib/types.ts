@@ -20,4 +20,5 @@ export interface AttendanceRecord {
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   timestamp: number; // For sorting
+  createdByUsername?: string; // Username of the user who created this entry
 }

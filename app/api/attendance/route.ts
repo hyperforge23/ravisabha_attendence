@@ -127,6 +127,7 @@ export async function GET(request: Request) {
 
     const records = await Attendance.find(query)
     .populate("smkDetailId") // Populate user details if needed
+    .populate("userId", "UserName") // Populate the user who created the entry
     .sort({ date: -1 });
 
     return NextResponse.json({ records }, { status: 200 });

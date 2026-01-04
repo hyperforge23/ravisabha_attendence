@@ -246,6 +246,7 @@ export default function ExportPage() {
             date: record.date.split('T')[0],
             time: new Date(record.date).toTimeString().slice(0, 5),
             timestamp: new Date(record.date).getTime(),
+            createdByUsername: record.userId?.UserName || '',
           }));
 
         setRecords(mappedRecords);
@@ -415,27 +416,28 @@ export default function ExportPage() {
         return;
       }
       
-      const mappedRecords: AttendanceRecord[] = data.records
-        .filter((record: any) => record.smkDetailId)
-        .map((record: any) => ({
-          id: record._id,
-          user: {
-            id: record.smkDetailId._id,
-            firstName: record.smkDetailId.FirstName,
-            middleName: record.smkDetailId.MiddleName,
-            lastName: record.smkDetailId.LastName,
-            smkNo: record.smkDetailId.SmkId,
-            mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-            firstNameGuj: record.smkDetailId.FirstNameGuj,
-            middleNameGuj: record.smkDetailId.MiddleNameGuj,
-            lastNameGuj: record.smkDetailId.LastNameGuj,
-            gender: record.smkDetailId.Gender?.toString(),
-          },
-          status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
-          date: record.date.split('T')[0],
-          time: new Date(record.date).toTimeString().slice(0, 5),
-          timestamp: new Date(record.date).getTime(),
-        }));
+        const mappedRecords: AttendanceRecord[] = data.records
+          .filter((record: any) => record.smkDetailId)
+          .map((record: any) => ({
+            id: record._id,
+            user: {
+              id: record.smkDetailId._id,
+              firstName: record.smkDetailId.FirstName,
+              middleName: record.smkDetailId.MiddleName,
+              lastName: record.smkDetailId.LastName,
+              smkNo: record.smkDetailId.SmkId,
+              mobileNo: record.smkDetailId.MobileNo?.toString() || '',
+              firstNameGuj: record.smkDetailId.FirstNameGuj,
+              middleNameGuj: record.smkDetailId.MiddleNameGuj,
+              lastNameGuj: record.smkDetailId.LastNameGuj,
+              gender: record.smkDetailId.Gender?.toString(),
+            },
+            status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
+            date: record.date.split('T')[0],
+            time: new Date(record.date).toTimeString().slice(0, 5),
+            timestamp: new Date(record.date).getTime(),
+            createdByUsername: record.userId?.UserName || '',
+          }));
 
       const filename = ravisabha 
         ? `attendance_${formatDateForFilename(ravisabha.date)}.csv`
