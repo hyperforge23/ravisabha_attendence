@@ -66,9 +66,10 @@ export default function UserCard({
 
       toast.success('Attendance marked');
       onClear();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking attendance:', error);
-      toast.error('Failed to mark attendance');
+      const errorMessage = error.response?.data?.message || 'Failed to mark attendance';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
