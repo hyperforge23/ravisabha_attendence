@@ -16,6 +16,8 @@ interface Ravisabha {
   yajman?: string;
   notes?: string;
   attendanceCount?: number;
+  mehmanMale?: number;
+  mehmanFemale?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -169,9 +171,18 @@ export default function RavisabhaListPage() {
                 className="cursor-pointer space-y-2"
               >
                 <div className="mb-3 pb-3 border-b border-gray-100">
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <span>Attendance:</span>
-                    <span className="text-gray-900">{ravisabha.attendanceCount || 0}</span>
+                  <div className="flex items-center gap-3 text-sm font-medium text-gray-700 flex-wrap">
+                    <span>
+                      Attendance:{' '}
+                      <span className="text-gray-900">
+                        {(ravisabha.attendanceCount || 0) + (ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)}
+                      </span>
+                    </span>
+                    {((ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)) > 0 && (
+                      <span className="text-xs font-normal text-gray-500">
+                        (incl. {(ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)} mehman)
+                      </span>
+                    )}
                   </div>
                 </div>
                 {ravisabha.yajman && (

@@ -6,6 +6,8 @@ export interface IRavisabhaDetails extends Document {
   expense?: number;
   yajman?: string;
   notes?: string;
+  mehmanMale?: number;
+  mehmanFemale?: number;
 }
 
 const RavisabhaDetailsSchema: Schema<IRavisabhaDetails> = new Schema(
@@ -27,6 +29,14 @@ const RavisabhaDetailsSchema: Schema<IRavisabhaDetails> = new Schema(
     notes: {
       type: String,
     },
+    mehmanMale: {
+      type: Number,
+      default: 0,
+    },
+    mehmanFemale: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -35,7 +45,7 @@ const RavisabhaDetailsSchema: Schema<IRavisabhaDetails> = new Schema(
 );
 
 const RavisabhaDetails: Model<IRavisabhaDetails> =
-  mongoose.models.ravisabha_details ||
+  (mongoose.models.ravisabha_details as Model<IRavisabhaDetails>) ||
   mongoose.model<IRavisabhaDetails>("ravisabha_details", RavisabhaDetailsSchema);
 
 export default RavisabhaDetails;

@@ -1,29 +1,40 @@
 import { AttendanceRecord } from './types';
 import { formatTo12Hour } from './utils';
 
-const escapeCSV = (value: string | number | undefined | null): string => {
-  if (value === null || value === undefined) return '';
-  const stringValue = String(value);
-  // If value contains comma, quote, or newline, wrap in quotes and escape quotes
-  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-    return `"${stringValue.replace(/"/g, '""')}"`;
-  }
-  return stringValue;
-};
-
-export const downloadCSV = (records: AttendanceRecord[], filename?: string) => {
-  const headers = ['First Name', 'Middle Name', 'Last Name', 'SMK No', 'Mobile No', 'Status', 'Gender', 'Date', 'Time', 'Created By'];
+export const downloadCSV = (records: AttendanceRecord[]) => {
+  const headers = [
+    'First Name', 'Middle Name', 'Last Name', 
+    'First Name (Guj)', 'Middle Name (Guj)', 'Last Name (Guj)',
+    'SMK No', 'Mobile No', 'Gender', 'Age',
+    'Bhakt ID', 'Present Village', 'Present Village (Guj)',
+    'Native', 'Native (Guj)', 'Zone', 'Zone (Guj)',
+    'Sub Zone', 'Sub Zone (Guj)', 'Kutumb ID',
+    'Status', 'Date', 'Time'
+  ];
   const rows = records.map((record) => [
-    escapeCSV(record.user.firstName || ''),
-    escapeCSV(record.user.middleName || ''),
-    escapeCSV(record.user.lastName || ''),
-    escapeCSV(record.user.smkNo || ''),
-    escapeCSV(record.user.mobileNo || ''),
-    escapeCSV(record.status || ''),
-    escapeCSV(record.user.gender === '1' ? 'Male' : record.user.gender === '2' ? 'Female' : ''),
-    escapeCSV(record.date || ''),
-    escapeCSV(formatTo12Hour(record.time)),
-    escapeCSV(record.createdByUsername || ''),
+    record.user.firstName,
+    record.user.middleName || '',
+    record.user.lastName,
+    record.user.firstNameGuj || '',
+    record.user.middleNameGuj || '',
+    record.user.lastNameGuj || '',
+    record.user.smkNo,
+    record.user.mobileNo,
+    record.user.gender === '1' ? 'Male' : record.user.gender === '2' ? 'Female' : record.user.gender || '',
+    record.user.age || '',
+    record.user.bhaktId || '',
+    record.user.presentVillageEng || '',
+    record.user.presentVillageGuj || '',
+    record.user.nativeEng || '',
+    record.user.nativeGuj || '',
+    record.user.zoneName || '',
+    record.user.zoneNameGuj || '',
+    record.user.subZoneName || '',
+    record.user.subZoneNameGuj || '',
+    record.user.kutumbId || '',
+    record.status,
+    record.date,
+    formatTo12Hour(record.time),
   ]);
 
   const csvContent =
