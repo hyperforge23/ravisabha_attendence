@@ -56,3 +56,15 @@ export function parseIndianCurrency(value: string): string {
   // Remove all commas and return
   return value.replace(/,/g, '');
 }
+
+/**
+ * Validate if a string is a valid MongoDB ObjectId
+ * MongoDB ObjectId is a 24-character hexadecimal string
+ * @param id - String to validate
+ * @returns true if valid ObjectId format, false otherwise
+ */
+export function isValidObjectId(id: string | null | undefined): boolean {
+  if (!id) return false;
+  // MongoDB ObjectId must be exactly 24 hexadecimal characters
+  return /^[0-9a-fA-F]{24}$/.test(id);
+}

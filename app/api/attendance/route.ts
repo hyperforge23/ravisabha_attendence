@@ -35,8 +35,17 @@ export async function POST(request: Request) {
       { message: "Attendance saved successfully", attendance: newAttendance },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error saving attendance:", error);
+    
+    // Handle duplicate key error (in case of race condition)
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { message: "Attendance already marked for this person" },
+        { status: 409 }
+      );
+    }
+    
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }
@@ -118,6 +127,7 @@ export async function GET(request: Request) {
 
     const records = await Attendance.find(query)
     .populate("smkDetailId") // Populate user details if needed
+    .populate("userId", "UserName") // Populate the user who created the entry
     .sort({ date: -1 });
 
     return NextResponse.json({ records }, { status: 200 });

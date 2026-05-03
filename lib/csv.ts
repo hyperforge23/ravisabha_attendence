@@ -39,12 +39,12 @@ export const downloadCSV = (records: AttendanceRecord[]) => {
 
   const csvContent =
     'data:text/csv;charset=utf-8,' +
-    [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    [headers.map(escapeCSV).join(','), ...rows.map((row) => row.join(','))].join('\n');
 
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement('a');
   link.setAttribute('href', encodedUri);
-  link.setAttribute('download', 'attendance_export.csv');
+  link.setAttribute('download', filename || 'attendance_export.csv');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

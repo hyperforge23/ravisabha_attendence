@@ -39,7 +39,7 @@ export default function RavisabhaListPage() {
         params: { month },
       });
       
-      setRavisabhas(data.ravisabhas);
+      setRavisabhas(data.ravisabhas || []);
     } catch (error) {
       console.error('Error fetching ravisabhas:', error);
       toast.error('Failed to load ravisabhas');
@@ -71,8 +71,9 @@ export default function RavisabhaListPage() {
     });
   };
 
-  const handleRavisabhaClick = (ravisabhaId: string) => {
-    router.push(`/?ravisabhaId=${ravisabhaId}`);
+  const handleRavisabhaClick = (ravisabhaId: string, date: string) => {
+    const encodedDate = encodeURIComponent(date);
+    router.push(`/?ravisabhaId=${ravisabhaId}&date=${encodedDate}`);
   };
 
   const getCurrentMonthName = () => {
@@ -134,7 +135,7 @@ export default function RavisabhaListPage() {
               className="group relative rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-gray-300"
             >
               <div
-                onClick={() => handleRavisabhaClick(ravisabha._id)}
+                onClick={() => handleRavisabhaClick(ravisabha._id, ravisabha.date)}
                 className="cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-4 pr-10">
@@ -166,7 +167,7 @@ export default function RavisabhaListPage() {
               </div>
 
               <div
-                onClick={() => handleRavisabhaClick(ravisabha._id)}
+                onClick={() => handleRavisabhaClick(ravisabha._id, ravisabha.date)}
                 className="cursor-pointer space-y-2"
               >
                 <div className="mb-3 pb-3 border-b border-gray-100">
