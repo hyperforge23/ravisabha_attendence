@@ -149,3 +149,52 @@ export async function POST(request: Request) {
   }
 }
 
+
+
+// PATCH: upsert mehman counts for a given date (used when no ravisabhaId is in context)
+export async function PATCH(request: Request) {
+  try {
+    await connectDb();
+
+    const body = await request.json();
+    const { date, mehmanMale, mehmanFemale } = body;
+
+    if (!date) {
+      return NextResponse.json(
+        { message: "Date is required" },
+        { status: 400 }
+      );
+    }
+
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
+    // Find existing ravisabha for this date or create one
+    const updated = await RavisabhaDetails.findOneAndUpdate(
+      { date: { $gte: startDate, $lte: endDate } },
+      [
+        {
+          $set: {
+            mehmanMale: Math.max(0, parseInt(mehmanMale) || 0),
+            mehmanFemale: Math.max(0, parseInt(mehmanFemale) || 0),
+            date: { $ifNull: ['$date', new Date(date)] },
+          },
+        },
+      ],
+      { upsert: true, new: true }
+    );
+
+    return NextResponse.json(
+      { message: "Mehman count updated", ravisabha: updated },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error updating mehman count:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

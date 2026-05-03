@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAttendance } from '@/components/AttendanceProvider';
 import { cn, formatTo12Hour } from '@/lib/utils';
 import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, Trash2, RotateCw } from 'lucide-react';
@@ -66,6 +66,83 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   const { records, removeRecord, refreshRecords } = useAttendance();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [serverCounts, setServerCounts] = useState<{ male: number; female: number; total: number } | null>(null);
+
+  // Mehman (guest) count state — persisted in DB
+  const [mehmanCount, setMehmanCount] = useState({ male: 0, female: 0 });
+  const [isMehmanModalOpen, setIsMehmanModalOpen] = useState(false);
+  const [mehmanInput, setMehmanInput] = useState({ male: '', female: '' });
+  const [isSavingMehman, setIsSavingMehman] = useState(false);
+  // Track which ravisabha doc holds the mehman count (needed for PUT by id)
+  const [mehmanRavisabhaId, setMehmanRavisabhaId] = useState<string | null>(null);
+
+  // Load mehman counts from DB on mount / when ravisabhaId changes
+  useEffect(() => {
+    const loadMehmanCount = async () => {
+      try {
+        if (ravisabhaId) {
+          // Fetch the specific ravisabha doc
+          const { data } = await axios.get(`/api/ravisabha/${ravisabhaId}`);
+          const r = data.ravisabha;
+          setMehmanCount({ male: r.mehmanMale ?? 0, female: r.mehmanFemale ?? 0 });
+          setMehmanRavisabhaId(ravisabhaId);
+        } else {
+          // Fetch today's ravisabha from the list endpoint
+          const today = new Date().toISOString().split('T')[0];
+          const { data } = await axios.get('/api/ravisabha', {
+            params: { startDate: today, endDate: today },
+          });
+          const list = data.ravisabhas ?? [];
+          if (list.length > 0) {
+            const r = list[0];
+            setMehmanCount({ male: r.mehmanMale ?? 0, female: r.mehmanFemale ?? 0 });
+            setMehmanRavisabhaId(String(r._id));
+          } else {
+            setMehmanCount({ male: 0, female: 0 });
+            setMehmanRavisabhaId(null);
+          }
+        }
+      } catch {
+        // silently ignore — mehman count just stays 0
+      }
+    };
+    loadMehmanCount();
+  }, [ravisabhaId]);
+
+  const handleSaveMehman = async () => {
+    const male = Math.max(0, parseInt(mehmanInput.male) || 0);
+    const female = Math.max(0, parseInt(mehmanInput.female) || 0);
+    setIsSavingMehman(true);
+    try {
+      const effectiveId = ravisabhaId || mehmanRavisabhaId;
+      if (effectiveId) {
+        // Update existing ravisabha doc by id
+        await axios.put(`/api/ravisabha/${effectiveId}`, {
+          mehmanMale: male,
+          mehmanFemale: female,
+        });
+      } else {
+        // No ravisabha doc yet for today — upsert via PATCH
+        const today = new Date().toISOString().split('T')[0];
+        const { data } = await axios.patch('/api/ravisabha', {
+          date: today,
+          mehmanMale: male,
+          mehmanFemale: female,
+        });
+        // Store the newly created/updated doc id for future saves
+        if (data.ravisabha?._id) {
+          setMehmanRavisabhaId(String(data.ravisabha._id));
+        }
+      }
+      setMehmanCount({ male, female });
+      setIsMehmanModalOpen(false);
+      toast.success('Mehman count saved');
+    } catch (error: any) {
+      console.error('Error saving mehman count:', error?.response?.data || error);
+      toast.error(`Failed to save mehman count: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
+    } finally {
+      setIsSavingMehman(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -227,7 +304,12 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     return counts;
   }, [filteredAndSortedRecords]);
 
-  const displayCounts = serverCounts || genderCounts;
+  const baseCounts = serverCounts || genderCounts;
+  const displayCounts = {
+    male: baseCounts.male + mehmanCount.male,
+    female: baseCounts.female + mehmanCount.female,
+    total: baseCounts.total + mehmanCount.male + mehmanCount.female,
+  };
 
   return (
     <>
@@ -248,7 +330,8 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           </div>
           
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+              {/* Line 1 on mobile: counts */}
               <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
                 <span>Male: <span className="font-medium text-gray-900">{displayCounts.male}</span></span>
                 <span className="text-gray-300">|</span>
@@ -256,17 +339,28 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
                 <span className="text-gray-300">|</span>
                 <span>Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
               </div>
-              <button 
-                onClick={handleRefresh} 
-                disabled={isRefreshing}
-                className="flex h-8 items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 shadow-sm"
-                title="Refresh Counts"
-              >
-                <RotateCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
-                <span>Refresh</span>
-              </button>
-
-
+              {/* Line 2 on mobile: both buttons side by side */}
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    setMehmanInput({ male: mehmanCount.male.toString(), female: mehmanCount.female.toString() });
+                    setIsMehmanModalOpen(true);
+                  }}
+                  className="flex-1 sm:flex-none flex h-8 items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 shadow-sm"
+                  title="Set Mehman Count"
+                >
+                  Mehman Count
+                </button>
+                <button
+                  onClick={handleRefresh} 
+                  disabled={isRefreshing}
+                  className="flex-1 sm:flex-none flex h-8 items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 disabled:opacity-50 shadow-sm"
+                  title="Refresh Counts"
+                >
+                  <RotateCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
+                  <span>Refresh</span>
+                </button>
+              </div>
             </div>
 
             {hasActiveFilters && (
@@ -575,6 +669,64 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           )}
         </div>
       </div>
+
+      {/* Mehman Count Modal */}
+      {isMehmanModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Mehman Count</h3>
+                <button
+                  onClick={() => setIsMehmanModalOpen(false)}
+                  className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Male</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mehmanInput.male}
+                    onChange={(e) => setMehmanInput((prev) => ({ ...prev, male: e.target.value }))}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+                    placeholder="Enter male count"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-gray-700">Female</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={mehmanInput.female}
+                    onChange={(e) => setMehmanInput((prev) => ({ ...prev, female: e.target.value }))}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+                    placeholder="Enter female count"
+                  />
+                </div>
+              </div>
+              <div className="flex w-full gap-3">
+                <button
+                  onClick={() => setIsMehmanModalOpen(false)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveMehman}
+                  disabled={isSavingMehman}
+                  className="flex-1 rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:opacity-50"
+                >
+                  {isSavingMehman ? 'Saving...' : 'Update'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmation.isOpen && (

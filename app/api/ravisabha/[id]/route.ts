@@ -40,7 +40,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { date, prasad, expense, yajman, notes } = body;
+    const { date, prasad, expense, yajman, notes, mehmanMale, mehmanFemale } = body;
 
     const updateData: any = {};
     if (date) updateData.date = new Date(date);
@@ -48,11 +48,13 @@ export async function PUT(
     if (expense !== undefined) updateData.expense = expense ? parseFloat(expense) : null;
     if (yajman !== undefined) updateData.yajman = yajman || null;
     if (notes !== undefined) updateData.notes = notes || null;
+    if (mehmanMale !== undefined) updateData.mehmanMale = Math.max(0, parseInt(mehmanMale) || 0);
+    if (mehmanFemale !== undefined) updateData.mehmanFemale = Math.max(0, parseInt(mehmanFemale) || 0);
 
     const updatedRavisabha = await RavisabhaDetails.findByIdAndUpdate(
       id,
-      updateData,
-      { new: true, runValidators: true }
+      { $set: updateData },
+      { new: true }
     );
 
     if (!updatedRavisabha) {
