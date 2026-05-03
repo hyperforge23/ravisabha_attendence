@@ -1,7 +1,18 @@
 import { AttendanceRecord } from './types';
 import { formatTo12Hour } from './utils';
 
-export const downloadCSV = (records: AttendanceRecord[]) => {
+const escapeCSV = (value: string | number | undefined | null): string => {
+  if (value === null || value === undefined) return '';
+  const stringValue = String(value);
+  // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  }
+  return stringValue;
+};
+
+
+export const downloadCSV = (records: AttendanceRecord[], filename?: string) => {
   const headers = [
     'First Name', 'Middle Name', 'Last Name', 
     'First Name (Guj)', 'Middle Name (Guj)', 'Last Name (Guj)',
