@@ -157,7 +157,7 @@ export async function PATCH(request: Request) {
     await connectDb();
 
     const body = await request.json();
-    const { date, mehmanMale, mehmanFemale } = body;
+    const { date, mehmanMaleInc, mehmanFemaleInc } = body;
 
     if (!date) {
       return NextResponse.json(
@@ -166,23 +166,25 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(date);
-    endDate.setHours(23, 59, 59, 999);
+    const [y, m, d] = date.split('T')[0].split('-').map(Number);
+    const startDate = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+    const endDate = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
 
-    // Find existing ravisabha for this date or create one
+    const incData: any = {};
+    if (mehmanMaleInc !== undefined) incData.mehmanMale = Math.max(0, parseInt(mehmanMaleInc) || 0);
+    if (mehmanFemaleInc !== undefined) incData.mehmanFemale = Math.max(0, parseInt(mehmanFemaleInc) || 0);
+
+    // Find existing ravisabha for this date or create one, then increment
     const updated = await RavisabhaDetails.findOneAndUpdate(
       { date: { $gte: startDate, $lte: endDate } },
-      [
-        {
-          $set: {
-            mehmanMale: Math.max(0, parseInt(mehmanMale) || 0),
-            mehmanFemale: Math.max(0, parseInt(mehmanFemale) || 0),
-            date: { $ifNull: ['$date', new Date(date)] },
-          },
+      {
+        $inc: incData,
+        $setOnInsert: {
+          date: new Date(Date.UTC(y, m - 1, d)),
+          mehmanMale: incData.mehmanMale ?? 0,
+          mehmanFemale: incData.mehmanFemale ?? 0,
         },
-      ],
+      },
       { upsert: true, new: true }
     );
 

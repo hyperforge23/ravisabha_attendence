@@ -121,7 +121,8 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   // Mehman (guest) count state — persisted in DB
   const [mehmanCount, setMehmanCount] = useState({ male: 0, female: 0 });
   const [isMehmanModalOpen, setIsMehmanModalOpen] = useState(false);
-  const [mehmanInput, setMehmanInput] = useState({ male: '', female: '' });
+  // stepper input — always starts at 0, represents the INCREMENT to add
+  const [mehmanInput, setMehmanInput] = useState({ male: 0, female: 0 });
   const [isSavingMehman, setIsSavingMehman] = useState(false);
   // Track which ravisabha doc holds the mehman count (needed for PUT by id)
   const [mehmanRavisabhaId, setMehmanRavisabhaId] = useState<string | null>(null);
@@ -160,33 +161,38 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   }, [ravisabhaId]);
 
   const handleSaveMehman = async () => {
-    const male = Math.max(0, parseInt(mehmanInput.male) || 0);
-    const female = Math.max(0, parseInt(mehmanInput.female) || 0);
+    const maleAdd = Math.max(0, mehmanInput.male);
+    const femaleAdd = Math.max(0, mehmanInput.female);
     setIsSavingMehman(true);
     try {
       const effectiveId = ravisabhaId || mehmanRavisabhaId;
       if (effectiveId) {
-        // Update existing ravisabha doc by id
-        await axios.put(`/api/ravisabha/${effectiveId}`, {
-          mehmanMale: male,
-          mehmanFemale: female,
+        // Increment existing ravisabha doc by id
+        await axios.patch(`/api/ravisabha/${effectiveId}`, {
+          mehmanMaleInc: maleAdd,
+          mehmanFemaleInc: femaleAdd,
         });
       } else {
-        // No ravisabha doc yet for today — upsert via PATCH
+        // No ravisabha doc yet for today — upsert via PATCH on list route
         const today = new Date().toISOString().split('T')[0];
         const { data } = await axios.patch('/api/ravisabha', {
           date: today,
-          mehmanMale: male,
-          mehmanFemale: female,
+          mehmanMaleInc: maleAdd,
+          mehmanFemaleInc: femaleAdd,
         });
-        // Store the newly created/updated doc id for future saves
         if (data.ravisabha?._id) {
           setMehmanRavisabhaId(String(data.ravisabha._id));
         }
       }
-      setMehmanCount({ male, female });
+      // Update local state by adding the increment
+      setMehmanCount((prev) => ({
+        male: prev.male + maleAdd,
+        female: prev.female + femaleAdd,
+      }));
+      // Reset stepper to 0
+      setMehmanInput({ male: 0, female: 0 });
       setIsMehmanModalOpen(false);
-      toast.success('Mehman count saved');
+      toast.success('Mehman count updated');
     } catch (error: any) {
       console.error('Error saving mehman count:', error?.response?.data || error);
       toast.error(`Failed to save mehman count: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
@@ -384,17 +390,19 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
               {/* Line 1 on mobile: counts */}
               <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
-                <span>Male: <span className="font-medium text-gray-900">{typeof displayCounts.male === 'string' ? displayCounts.male : displayCounts.male}</span></span>
+                <span>Male: <span className="font-medium text-gray-900">{displayCounts.male}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Female: <span className="font-medium text-gray-900">{typeof displayCounts.female === 'string' ? displayCounts.female : displayCounts.female}</span></span>
+                <span>Female: <span className="font-medium text-gray-900">{displayCounts.female}</span></span>
                 <span className="text-gray-300">|</span>
-                <span>Total: <span className="font-medium text-gray-900">{typeof displayCounts.total === 'string' ? displayCounts.total : displayCounts.total}</span></span>
+                <span>Mehman: <span className="font-medium text-gray-900">{mehmanCount.male + mehmanCount.female}</span></span>
+                <span className="text-gray-300">|</span>
+                <span>Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
               </div>
               {/* Line 2 on mobile: both buttons side by side */}
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => {
-                    setMehmanInput({ male: mehmanCount.male.toString(), female: mehmanCount.female.toString() });
+                    setMehmanInput({ male: 0, female: 0 });
                     setIsMehmanModalOpen(true);
                   }}
                   className="flex-1 sm:flex-none flex h-8 items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all focus:outline-none focus:ring-2 focus:ring-gray-200 shadow-sm"
@@ -738,25 +746,63 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Male</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={mehmanInput.male}
-                    onChange={(e) => setMehmanInput((prev) => ({ ...prev, male: e.target.value }))}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-                    placeholder="Enter male count"
-                  />
+                  <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => setMehmanInput((p) => ({ ...p, male: Math.max(0, p.male - 1) }))}
+                      className="text-2xl font-bold text-blue-600 hover:text-blue-700 w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-50 transition-colors"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      value={mehmanInput.male === 0 ? '' : mehmanInput.male}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setMehmanInput((p) => ({ ...p, male: isNaN(val) ? 0 : Math.max(0, val) }));
+                      }}
+                      placeholder="0"
+                      className="w-16 text-center text-2xl font-semibold text-gray-800 bg-transparent border-none outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMehmanInput((p) => ({ ...p, male: p.male + 1 }))}
+                      className="text-2xl font-bold text-blue-600 hover:text-blue-700 w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-50 transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-medium text-gray-700">Female</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={mehmanInput.female}
-                    onChange={(e) => setMehmanInput((prev) => ({ ...prev, female: e.target.value }))}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
-                    placeholder="Enter female count"
-                  />
+                  <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => setMehmanInput((p) => ({ ...p, female: Math.max(0, p.female - 1) }))}
+                      className="text-2xl font-bold text-blue-600 hover:text-blue-700 w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-50 transition-colors"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      value={mehmanInput.female === 0 ? '' : mehmanInput.female}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setMehmanInput((p) => ({ ...p, female: isNaN(val) ? 0 : Math.max(0, val) }));
+                      }}
+                      placeholder="0"
+                      className="w-16 text-center text-2xl font-semibold text-gray-800 bg-transparent border-none outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMehmanInput((p) => ({ ...p, female: p.female + 1 }))}
+                      className="text-2xl font-bold text-blue-600 hover:text-blue-700 w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-50 transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex w-full gap-3">

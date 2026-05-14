@@ -85,6 +85,41 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await connectDb();
+
+    const { id } = await params;
+    const body = await request.json();
+    const { mehmanMaleInc, mehmanFemaleInc } = body;
+
+    const incData: any = {};
+    if (mehmanMaleInc !== undefined) incData.mehmanMale = Math.max(0, parseInt(mehmanMaleInc) || 0);
+    if (mehmanFemaleInc !== undefined) incData.mehmanFemale = Math.max(0, parseInt(mehmanFemaleInc) || 0);
+
+    const updatedRavisabha = await RavisabhaDetails.findByIdAndUpdate(
+      id,
+      { $inc: incData },
+      { new: true }
+    );
+
+    if (!updatedRavisabha) {
+      return NextResponse.json({ message: "Ravisabha not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      { message: "Mehman count incremented", ravisabha: updatedRavisabha },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error incrementing mehman count:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
