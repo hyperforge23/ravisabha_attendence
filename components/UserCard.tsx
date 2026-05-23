@@ -28,6 +28,7 @@ export default function UserCard({
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bhojan, setBhojan] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -60,11 +61,13 @@ export default function UserCard({
         name: `${user.firstName} ${user.middleName ? `${user.middleName} ` : ''}${user.lastName}`,
         status: 'present',
         date: new Date(`${date}T${time}`),
+        bhojan,
       });
 
       await refreshRecords();
 
       toast.success('Attendance marked');
+      setBhojan(false);
       onClear();
     } catch (error: any) {
       console.error('Error marking attendance:', error);
@@ -73,10 +76,6 @@ export default function UserCard({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleEdit = () => {
-    setIsEditModalOpen(true);
   };
 
   const handleUserUpdated = (updatedUser: User) => {
@@ -96,8 +95,7 @@ export default function UserCard({
       setIsDeleteModalOpen(false);
       onClear();
     } catch (error: any) {
-      const message =
-        error.response?.data?.message || 'Failed to delete user';
+      const message = error.response?.data?.message || 'Failed to delete user';
       toast.error(message);
     } finally {
       setIsDeleting(false);
@@ -105,22 +103,23 @@ export default function UserCard({
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-all hover:shadow-md">
-      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-        <div>
+    <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm transition-all hover:shadow-md overflow-hidden">
+      {/* Top row: user info + action buttons */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        {/* User info */}
+        <div className="min-w-0">
           {user ? (
             <>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">
                 {user.firstName} {user.middleName ? `${user.middleName} ` : ''}{user.lastName}
                 {(user.firstNameGuj || user.middleNameGuj || user.lastNameGuj) && (
-                  <span className="ml-2 font-normal text-gray-500">
+                  <span className="ml-1 font-normal text-gray-500 text-sm">
                     ({user.firstNameGuj || ''} {user.middleNameGuj ? `${user.middleNameGuj} ` : ''}{user.lastNameGuj || ''})
                   </span>
                 )}
               </h3>
-              <div className="mt-1 flex flex-col gap-1 text-sm text-gray-500 sm:flex-row sm:gap-4">
+              <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-500 sm:flex-row sm:gap-4">
                 <span>SMK No : {user.smkNo}</span>
-                <span className="hidden sm:inline">•</span>
                 <span>Mobile No : {user.mobileNo}</span>
               </div>
             </>
@@ -134,35 +133,46 @@ export default function UserCard({
           )}
         </div>
 
+        {/* Action buttons — wrap on mobile */}
         {user && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <label className="flex items-center gap-1.5 cursor-pointer select-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={bhojan}
+                onChange={(e) => setBhojan(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 accent-black cursor-pointer"
+              />
+              Bhojan
+            </label>
             <button
-              onClick={handleEdit}
-              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              onClick={() => setIsEditModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
               <Edit2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Edit</span>
+              <span>Edit</span>
             </button>
             <button
               onClick={() => setIsDeleteModalOpen(true)}
-              className="flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+              className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Delete</span>
+              <span>Delete</span>
             </button>
             <button
               onClick={onClear}
-              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
             >
               <X className="h-4 w-4" />
-              <span className="hidden sm:inline">Clear</span>
+              <span>Clear</span>
             </button>
           </div>
         )}
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="relative">
+      {/* Date / Time / Present row */}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Date</label>
           <div className="relative">
             <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -171,11 +181,11 @@ export default function UserCard({
               value={date}
               disabled
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-900 focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-3 py-2 text-sm text-gray-900 focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
         </div>
-        <div className="relative">
+        <div>
           <label className="mb-1.5 block text-xs font-medium text-gray-500">Time</label>
           <div className="relative">
             <Clock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -184,11 +194,11 @@ export default function UserCard({
               value={time}
               onChange={(e) => setTime(e.target.value)}
               disabled={!user}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2 text-sm text-gray-900 focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-3 py-2 text-sm text-gray-900 focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
         </div>
-        <div className="flex items-end">
+        <div className="flex items-end sm:col-span-2 lg:col-span-1">
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || !user}
@@ -215,9 +225,7 @@ export default function UserCard({
               <div className="rounded-full bg-red-100 p-3">
                 <Trash2 className="h-6 w-6 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Delete User
-              </h3>
+              <h3 className="text-lg font-semibold text-gray-900">Delete User</h3>
             </div>
             <p className="mb-6 text-sm text-gray-600">
               Are you sure you want to delete{' '}

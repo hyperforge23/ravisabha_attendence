@@ -111,6 +111,23 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
         // On error, clear serverCounts to use calculated counts
         setServerCounts(null);
       }
+
+      // Also reload bhojanCount from the ravisabha doc
+      try {
+        if (ravisabhaId) {
+          const { data } = await axios.get(`/api/ravisabha/${ravisabhaId}`);
+          setBhojanCount(data.ravisabha?.bhojanCount ?? 0);
+        } else {
+          const today = new Date().toISOString().split('T')[0];
+          const { data } = await axios.get('/api/ravisabha', {
+            params: { startDate: today, endDate: today },
+          });
+          const list = data.ravisabhas ?? [];
+          setBhojanCount(list.length > 0 ? (list[0].bhojanCount ?? 0) : 0);
+        }
+      } catch {
+        // silently ignore
+      }
     };
 
     // Small delay to ensure the API has the latest data
@@ -120,6 +137,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
 
   // Mehman (guest) count state — persisted in DB
   const [mehmanCount, setMehmanCount] = useState({ male: 0, female: 0 });
+  const [bhojanCount, setBhojanCount] = useState(0);
   const [isMehmanModalOpen, setIsMehmanModalOpen] = useState(false);
   // stepper input — always starts at 0, represents the INCREMENT to add
   const [mehmanInput, setMehmanInput] = useState({ male: 0, female: 0 });
@@ -136,6 +154,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           const { data } = await axios.get(`/api/ravisabha/${ravisabhaId}`);
           const r = data.ravisabha;
           setMehmanCount({ male: r.mehmanMale ?? 0, female: r.mehmanFemale ?? 0 });
+          setBhojanCount(r.bhojanCount ?? 0);
           setMehmanRavisabhaId(ravisabhaId);
         } else {
           // Fetch today's ravisabha from the list endpoint
@@ -147,9 +166,11 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           if (list.length > 0) {
             const r = list[0];
             setMehmanCount({ male: r.mehmanMale ?? 0, female: r.mehmanFemale ?? 0 });
+            setBhojanCount(r.bhojanCount ?? 0);
             setMehmanRavisabhaId(String(r._id));
           } else {
             setMehmanCount({ male: 0, female: 0 });
+            setBhojanCount(0);
             setMehmanRavisabhaId(null);
           }
         }
@@ -388,15 +409,29 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-              {/* Line 1 on mobile: counts */}
-              <div className="flex items-center gap-3 text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
-                <span>Male: <span className="font-medium text-gray-900">{displayCounts.male}</span></span>
-                <span className="text-gray-300">|</span>
-                <span>Female: <span className="font-medium text-gray-900">{displayCounts.female}</span></span>
-                <span className="text-gray-300">|</span>
-                <span>Mehman: <span className="font-medium text-gray-900">{mehmanCount.male + mehmanCount.female}</span></span>
-                <span className="text-gray-300">|</span>
-                <span>Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
+              {/* Mobile: 2 rows of counts. Desktop: single row */}
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center text-sm text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-100">
+                {/* Row 1: Male | Female | Bhojan */}
+                <div className="flex items-center gap-3 text-[16px]">
+                  <span>Male: <span className="font-medium text-gray-900">{displayCounts.male}</span></span>
+                  <span className="text-gray-300">|</span>
+                  <span>Female: <span className="font-medium text-gray-900">{displayCounts.female}</span></span>
+                  <span className="text-gray-300">|</span>
+                  <span>Bhojan: <span className="font-medium text-gray-900">{bhojanCount}</span></span>
+                  <span className="text-gray-300">|</span>
+                   <span className="text-[15px]">Mehman: <span className="font-medium text-gray-900">{mehmanCount.male + mehmanCount.female}</span></span>
+                  {/* Desktop: continue on same line */}
+                  <span className="hidden sm:inline text-gray-300">|</span>
+                  <span className="hidden sm:inline">Mehman: <span className="font-medium text-gray-900">{mehmanCount.male + mehmanCount.female}</span></span>
+                  <span className="hidden sm:inline text-gray-300">|</span>
+                  <span className="hidden sm:inline">Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
+                </div>
+                {/* Row 2 (mobile only): Mehman | Total */}
+                <div className="flex items-center justify-center gap-3 sm:hidden pt-[15px]">
+                  <span className="inline-flex items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 shadow-sm text-[15px]">
+                    Total: <span className="ml-1 font-semibold text-gray-900">{displayCounts.total}</span>
+                  </span>
+                </div>
               </div>
               {/* Line 2 on mobile: both buttons side by side */}
               <div className="flex items-center gap-2">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import Attendance from "@/models/Attendance";
+import RavisabhaDetails from "@/models/RavisabhaDetails";
 import mongoose from "mongoose";
 // Import all models to ensure they are registered (needed for populate)
 import "@/models";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
     await connectDb();
 
     const body = await request.json();
-    const { smkDetailId, userId, ravisabhaId, SmkId, name, status, remarks } = body;
+    const { smkDetailId, userId, ravisabhaId, SmkId, name, status, remarks, bhojan } = body;
 
     if (!smkDetailId || !userId || !SmkId) {
       return NextResponse.json(
@@ -27,9 +28,28 @@ export async function POST(request: Request) {
       name,
       status: status || "absent",
       remarks,
+      bhojan: bhojan === true,
     });
 
     await newAttendance.save();
+
+    // If bhojan is checked, increment bhojanCount on the ravisabha doc
+    if (bhojan === true) {
+      if (ravisabhaId && mongoose.Types.ObjectId.isValid(ravisabhaId)) {
+        // Specific ravisabha — increment by ID
+        await RavisabhaDetails.findByIdAndUpdate(ravisabhaId, { $inc: { bhojanCount: 1 } });
+      } else {
+        // Today's date — find or upsert
+        const date = new Date(body.date || Date.now());
+        const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+        const endOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+        await RavisabhaDetails.findOneAndUpdate(
+          { date: { $gte: startOfDay, $lte: endOfDay } },
+          { $inc: { bhojanCount: 1 }, $setOnInsert: { date: startOfDay } },
+          { upsert: true }
+        );
+      }
+    }
 
     return NextResponse.json(
       { message: "Attendance saved successfully", attendance: newAttendance },

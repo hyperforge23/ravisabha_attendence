@@ -8,6 +8,7 @@ export interface IRavisabhaDetails extends Document {
   notes?: string;
   mehmanMale?: number;
   mehmanFemale?: number;
+  bhojanCount?: number;
 }
 
 const RavisabhaDetailsSchema: Schema<IRavisabhaDetails> = new Schema(
@@ -34,6 +35,10 @@ const RavisabhaDetailsSchema: Schema<IRavisabhaDetails> = new Schema(
       default: 0,
     },
     mehmanFemale: {
+      type: Number,
+      default: 0,
+    },
+    bhojanCount: {
       type: Number,
       default: 0,
     },
