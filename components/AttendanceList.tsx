@@ -422,8 +422,6 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
                    <span className="text-[15px]">Mehman: <span className="font-medium text-gray-900">{mehmanCount.male + mehmanCount.female}</span></span>
                   {/* Desktop: continue on same line */}
                   <span className="hidden sm:inline text-gray-300">|</span>
-                  <span className="hidden sm:inline">Mehman: <span className="font-medium text-gray-900">{mehmanCount.male + mehmanCount.female}</span></span>
-                  <span className="hidden sm:inline text-gray-300">|</span>
                   <span className="hidden sm:inline">Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>
                 </div>
                 {/* Row 2 (mobile only): Mehman | Total */}
