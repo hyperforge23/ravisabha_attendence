@@ -8,6 +8,7 @@ export interface IAttendance extends Document {
   date: Date;
   SmkId: string;
   name: string;
+  bhojan?: boolean;
 }
 
 const AttendanceSchema: Schema<IAttendance> = new Schema(
@@ -38,6 +39,10 @@ const AttendanceSchema: Schema<IAttendance> = new Schema(
     date: {
       type: Date,
       default: Date.now,
+    },
+    bhojan: {
+      type: Boolean,
+      default: false,
     },
   },
   {

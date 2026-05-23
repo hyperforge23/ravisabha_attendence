@@ -124,6 +124,9 @@ export async function POST(request: Request) {
       expense: expense ? parseFloat(expense) : undefined,
       yajman,
       notes,
+      mehmanMale: 0,
+      mehmanFemale: 0,
+      bhojanCount: 0,
     });
 
     await newRavisabha.save();
