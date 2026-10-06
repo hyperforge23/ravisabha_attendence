@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     await connectDb();
 
     const body = await request.json();
-    const { date, prasad, expense, yajman, notes } = body;
+    const { date, prasad, expense, yajman, notes, pre_attendance } = body;
 
     if (!date) {
       return NextResponse.json(
@@ -127,6 +127,7 @@ export async function POST(request: Request) {
       mehmanMale: 0,
       mehmanFemale: 0,
       bhojanCount: 0,
+      pre_attendance: pre_attendance ?? false,
     });
 
     await newRavisabha.save();

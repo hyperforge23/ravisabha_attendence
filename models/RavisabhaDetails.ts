@@ -9,6 +9,7 @@ export interface IRavisabhaDetails extends Document {
   mehmanMale?: number;
   mehmanFemale?: number;
   bhojanCount?: number;
+  pre_attendance?: boolean;
 }
 
 const RavisabhaDetailsSchema: Schema<IRavisabhaDetails> = new Schema(
@@ -41,6 +42,10 @@ const RavisabhaDetailsSchema: Schema<IRavisabhaDetails> = new Schema(
     bhojanCount: {
       type: Number,
       default: 0,
+    },
+    pre_attendance: {
+      type: Boolean,
+      default: false,
     },
   },
   {

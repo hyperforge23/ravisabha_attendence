@@ -14,6 +14,7 @@ interface Ravisabha {
   expense?: number;
   yajman?: string;
   notes?: string;
+  pre_attendance?: boolean;
 }
 
 interface AddRavisabhaModalProps {
@@ -29,6 +30,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   const [expense, setExpense] = useState('');
   const [yajman, setYajman] = useState('');
   const [notes, setNotes] = useState('');
+  const [preAttendance, setPreAttendance] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Search State
@@ -76,6 +78,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
         setExpense(ravisabha.expense ? formatIndianCurrency(ravisabha.expense) : '');
         setYajman(ravisabha.yajman || '');
         setNotes(ravisabha.notes || '');
+        setPreAttendance(ravisabha.pre_attendance ?? false);
       } else {
         // Add mode: Set today's date when modal opens
         const today = new Date().toISOString().split('T')[0];
@@ -84,6 +87,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
         setExpense('');
         setYajman('');
         setNotes('');
+        setPreAttendance(false);
       }
     }
   }, [isOpen, ravisabha]);
@@ -106,6 +110,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
           expense: expense ? parseFloat(parseIndianCurrency(expense)) : null,
           yajman: yajman || null,
           notes: notes || null,
+          pre_attendance: preAttendance,
         };
         
         await axios.put(`/api/ravisabha/${ravisabha._id}`, updatePayload);
@@ -118,6 +123,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
           expense: expense ? parseFloat(parseIndianCurrency(expense)) : undefined,
           yajman: yajman || undefined,
           notes: notes || undefined,
+          pre_attendance: preAttendance,
         });
         toast.success('Ravisabha added successfully');
       }
@@ -269,6 +275,35 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
               className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-black focus:bg-white focus:outline-none focus:ring-1 focus:ring-black resize-none"
             />
           </div>
+
+          {/* Pre-Attendance Toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="text-sm font-medium text-gray-700">Pre-Attendance</p>
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-medium transition-colors duration-200 ${!preAttendance ? 'text-red-600' : 'text-gray-400'}`}>
+                De-activate
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={preAttendance}
+                onClick={() => setPreAttendance((prev) => !prev)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  preAttendance ? 'bg-green-500 focus:ring-green-500' : 'bg-red-400 focus:ring-red-400'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    preAttendance ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className={`text-sm font-medium transition-colors duration-200 ${preAttendance ? 'text-green-600' : 'text-gray-400'}`}>
+                Activate
+              </span>
+            </div>
+          </div>
+
 
           <div className="flex gap-3 pt-4">
             <button
