@@ -1,0 +1,219 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { Search, UserPlus } from 'lucide-react';
+import { User } from '@/lib/types';
+import axios from 'axios';
+import AddUserModal from './AddUserModal';
+
+interface SearchSectionProps {
+  onSelectUser: (user: User) => void;
+  showAddUser?: boolean;
+}
+
+export default function SearchSection({ onSelectUser, showAddUser = true }: SearchSectionProps) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<User[]>([]);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialFirstName, setInitialFirstName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!query) {
+        setResults([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const { data } = await axios.get('/api/search', {
+          params: {
+            query,
+          },
+        });
+        setResults(data.users);
+      } catch (error) {
+        console.error('Search error:', error);
+        setResults([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchUsers, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [query]);
+
+  useEffect(() => {
+    setActiveIndex(-1);
+  }, [results]);
+
+  const handleSelect = (user: User) => {
+    onSelectUser(user);
+    setQuery('');
+    setResults([]);
+    setIsFocused(false);
+    setActiveIndex(-1);
+    // Blur input to close mobile keyboard
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+  };
+
+  const handleAddNewUser = (searchQuery?: string) => {
+    setInitialFirstName(searchQuery || '');
+    setIsModalOpen(true);
+    setIsFocused(false);
+    // Blur input to close mobile keyboard
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
+  };
+
+  const handleUserAdded = (user: User) => {
+    onSelectUser(user);
+    setQuery('');
+    setResults([]);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!results.length) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < results.length) {
+        handleSelect(results[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsFocused(false);
+    }
+  };
+
+  return (
+    <>
+    <div className="flex flex-col gap-4 sm:flex-row">
+      <div className="relative flex-1">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search by name, SMK no, or mobile no..."
+              value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsFocused(true);
+            }}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            onKeyDown={handleKeyDown}
+            className="w-full rounded-lg border border-gray-200 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-black focus:outline-none focus:ring-1 focus:ring-black"
+          />
+        </div>
+
+        {isFocused && query && (
+          <div className="absolute top-full mt-2 w-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-lg z-10">
+            {isLoading ? (
+              <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+            ) : results.length > 0 ? (
+                <>
+              <ul className="max-h-60 overflow-y-auto py-2">
+                    {results.map((user, index) => (
+                    <li
+                      key={user.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // Prevent input blur
+                        handleSelect(user);
+                      }}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      className={`cursor-pointer px-3 py-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-sm transition-colors ${
+                        index === activeIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                        <span className="font-medium text-gray-900">
+                          {user.firstName} {user.middleName ? `${user.middleName} ` : ''}{user.lastName}
+                      </span>
+                      
+                      <div className="flex items-center gap-2 sm:contents">
+                        <span className="text-gray-300 hidden sm:block">|</span>
+                          <span className="whitespace-nowrap text-gray-500">
+                          {user.smkNo}
+                        </span>
+                        <span className="text-gray-300 hidden sm:block">|</span>
+                          <span className="whitespace-nowrap text-gray-500">
+                          {user.mobileNo}
+                        </span>
+                      </div>
+                    </li>
+                    ))}
+              </ul>
+                  {showAddUser && (
+                    <div className="border-t border-gray-100 px-3 py-2">
+                      <button
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent input blur
+                          handleAddNewUser();
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Add New User
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="px-4 py-3">
+                  <p className="text-sm text-gray-500 mb-3">No users found.</p>
+                  {showAddUser && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // Prevent input blur
+                        handleAddNewUser(query);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Add New User
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            )}
+          </div>
+
+        {showAddUser && (
+          <button
+            onClick={() => handleAddNewUser()}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm sm:w-auto"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add New User</span>
+            <span className="sm:hidden">Add User</span>
+          </button>
+        )}
+      </div>
+
+      {showAddUser && (
+        <AddUserModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onUserAdded={handleUserAdded}
+          initialFirstName={initialFirstName}
+        />
+      )}
+    </>
+  );
+}
