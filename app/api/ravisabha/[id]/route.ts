@@ -40,7 +40,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { date, prasad, expense, yajman, notes, mehmanMale, mehmanFemale } = body;
+    const { date, prasad, expense, yajman, notes, mehmanMale, mehmanFemale, pre_attendance } = body;
 
     const updateData: any = {};
     if (date) updateData.date = new Date(date);
@@ -50,6 +50,7 @@ export async function PUT(
     if (notes !== undefined) updateData.notes = notes || null;
     if (mehmanMale !== undefined) updateData.mehmanMale = Math.max(0, parseInt(mehmanMale) || 0);
     if (mehmanFemale !== undefined) updateData.mehmanFemale = Math.max(0, parseInt(mehmanFemale) || 0);
+    if (pre_attendance !== undefined) updateData.pre_attendance = Boolean(pre_attendance);
 
     const updatedRavisabha = await RavisabhaDetails.findByIdAndUpdate(
       id,
