@@ -15,6 +15,9 @@ interface Ravisabha {
   yajman?: string;
   notes?: string;
   pre_attendance?: boolean;
+  mehmanMale?: number;
+  mehmanFemale?: number;
+  attendanceCount?: number;
 }
 
 interface AddRavisabhaModalProps {
@@ -32,6 +35,12 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   const [notes, setNotes] = useState('');
   const [preAttendance, setPreAttendance] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Pre-attendance live counts
+  const [dbEntryCount, setDbEntryCount] = useState(0);
+  const [totalMehman, setTotalMehman] = useState(0);
+  const [totalFamily, setTotalFamily] = useState(0);
+  const [isFetchingCounts, setIsFetchingCounts] = useState(false);
 
   // Search State
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -67,6 +76,29 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   }, [yajman]);
 
   const isEditMode = !!ravisabha;
+
+  // Fetch live pre-attendance counts from PreAttendance table when editing
+  useEffect(() => {
+    if (!isOpen || !isEditMode || !ravisabha) return;
+
+    const fetchCounts = async () => {
+      setIsFetchingCounts(true);
+      try {
+        const { data } = await axios.get('/api/pre-attendance', {
+          params: { ravisabhaId: ravisabha._id },
+        });
+        setDbEntryCount(data.totalEntries ?? 0);
+        setTotalMehman(data.totalMehman ?? 0);
+        setTotalFamily(data.totalFamily ?? 0);
+      } catch (error) {
+        console.error('Error fetching pre-attendance counts:', error);
+      } finally {
+        setIsFetchingCounts(false);
+      }
+    };
+
+    fetchCounts();
+  }, [isOpen, isEditMode, ravisabha?._id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -276,6 +308,25 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
             />
           </div>
 
+          {/* Pre-Attendance Total (edit mode only) */}
+          {isEditMode && ravisabha && (
+            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+              <p className="text-sm font-medium text-blue-800 mb-2">Total Pre-Attendance</p>
+              {isFetchingCounts ? (
+                <p className="text-sm text-blue-500">Loading...</p>
+              ) : (
+                <div className="flex items-center gap-3 text-sm text-blue-700 flex-wrap">
+                  <span>Entries: <span className="font-semibold">{dbEntryCount}</span></span>
+                  <span>Mehman: <span className="font-semibold">{totalMehman}</span></span>
+                  <span>Family: <span className="font-semibold">{totalFamily}</span></span>
+                  <span className="ml-auto text-base font-bold text-blue-900">
+                    Total: {dbEntryCount + totalMehman + totalFamily}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Pre-Attendance Toggle */}
           <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
             <p className="text-sm font-medium text-gray-700">Pre-Attendance</p>
@@ -318,10 +369,13 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
               disabled={isSubmitting}
               className="flex-1 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting 
-                ? (isEditMode ? 'Updating...' : 'Adding...') 
-                : (isEditMode ? 'Update Ravisabha' : 'Add Ravisabha')
-              }
+              {isSubmitting
+                ? isEditMode
+                  ? 'Updating...'
+                  : 'Adding...'
+                : isEditMode
+                  ? 'Update Ravisabha'
+                  : 'Add Ravisabha'}
             </button>
           </div>
         </form>
