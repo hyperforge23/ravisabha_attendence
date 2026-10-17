@@ -16,6 +16,7 @@ interface Ravisabha {
   yajman?: string;
   notes?: string;
   attendanceCount?: number;
+  preAttendanceCount?: number;
   mehmanMale?: number;
   mehmanFemale?: number;
   createdAt?: string;
@@ -176,6 +177,12 @@ export default function RavisabhaListPage() {
                       Attendance:{' '}
                       <span className="text-gray-900">
                         {(ravisabha.attendanceCount || 0) + (ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)}
+                      </span>
+                    </span>
+                    <span>
+                      Pre-Attendance:{' '}
+                      <span className="text-gray-900">
+                        {ravisabha.preAttendanceCount || 0}
                       </span>
                     </span>
                     {((ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)) > 0 && (

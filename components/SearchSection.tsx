@@ -5,6 +5,8 @@ import { Search, UserPlus } from 'lucide-react';
 import { User } from '@/lib/types';
 import axios from 'axios';
 import AddUserModal from './AddUserModal';
+import { useAttendance } from '@/components/AttendanceProvider';
+import PreAttendanceBadge from '@/components/PreAttendanceBadge';
 
 interface SearchSectionProps {
   onSelectUser: (user: User) => void;
@@ -12,6 +14,7 @@ interface SearchSectionProps {
 }
 
 export default function SearchSection({ onSelectUser, showAddUser = true }: SearchSectionProps) {
+  const { preAttendanceStatus, showPreAttendance } = useAttendance();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isFocused, setIsFocused] = useState(false);
@@ -154,6 +157,9 @@ export default function SearchSection({ onSelectUser, showAddUser = true }: Sear
                           <span className="whitespace-nowrap text-gray-500">
                           {user.mobileNo}
                         </span>
+                        {showPreAttendance && (
+                          <PreAttendanceBadge status={preAttendanceStatus[user.id]} />
+                        )}
                       </div>
                     </li>
                     ))}

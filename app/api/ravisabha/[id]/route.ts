@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
-import RavisabhaDetails from "@/models/RavisabhaDetails";
+import RavisabhaDetails, { getPreAttendanceConflictMessage } from "@/models/RavisabhaDetails";
 // Import all models to ensure they are registered
 import "@/models";
 
@@ -51,6 +51,13 @@ export async function PUT(
     if (mehmanMale !== undefined) updateData.mehmanMale = Math.max(0, parseInt(mehmanMale) || 0);
     if (mehmanFemale !== undefined) updateData.mehmanFemale = Math.max(0, parseInt(mehmanFemale) || 0);
     if (pre_attendance !== undefined) updateData.pre_attendance = Boolean(pre_attendance);
+
+    if (updateData.pre_attendance === true) {
+      const conflictMessage = await getPreAttendanceConflictMessage(id);
+      if (conflictMessage) {
+        return NextResponse.json({ message: conflictMessage }, { status: 409 });
+      }
+    }
 
     const updatedRavisabha = await RavisabhaDetails.findByIdAndUpdate(
       id,

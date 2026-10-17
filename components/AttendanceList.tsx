@@ -7,6 +7,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, 
 import { toast } from 'sonner';
 import { AttendanceRecord } from '@/lib/types';
 import axios from 'axios';
+import PreAttendanceBadge from '@/components/PreAttendanceBadge';
 
 type SortKey = 'name' | 'smkNo' | 'mobileNo' | 'dateTime' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -61,9 +62,10 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     mobileNo: '',
     date: '',
     status: 'All',
+    preAttendance: 'All',
   });
 
-  const { records, removeRecord, refreshRecords } = useAttendance();
+  const { records, removeRecord, refreshRecords, preAttendanceStatus, showPreAttendance } = useAttendance();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [serverCounts, setServerCounts] = useState<{ male: number; female: number; total: number } | null>(null);
   const [isLoadingCounts, setIsLoadingCounts] = useState(false);
@@ -269,6 +271,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
       mobileNo: '',
       date: '',
       status: 'All',
+      preAttendance: 'All',
     });
     setVisibleFilters({});
     setSortConfig({ key: 'dateTime', direction: 'desc' });
@@ -281,7 +284,8 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
       filters.smkNo !== '' ||
       filters.mobileNo !== '' ||
       filters.date !== '' ||
-      filters.status !== 'All';
+      filters.status !== 'All' ||
+      filters.preAttendance !== 'All';
 
     const isSortActive = sortConfig.key !== 'dateTime' || sortConfig.direction !== 'desc';
 
@@ -316,6 +320,13 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     }
     if (filters.status !== 'All') {
       result = result.filter((r) => r.status === filters.status);
+    }
+    if (filters.preAttendance !== 'All') {
+      result = result.filter((r) => {
+        const preStatus = preAttendanceStatus[r.user.id];
+        if (filters.preAttendance === 'None') return !preStatus;
+        return preStatus === filters.preAttendance;
+      });
     }
 
     // Sort
@@ -352,7 +363,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     });
 
     return result;
-  }, [records, filters, sortConfig]);
+  }, [records, filters, sortConfig, preAttendanceStatus]);
 
   const totalPages = Math.ceil(filteredAndSortedRecords.length / itemsPerPage);
   const paginatedRecords = filteredAndSortedRecords.slice(
@@ -563,6 +574,29 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
                       />
                     )}
                   </th>
+                  {showPreAttendance && (
+                    <th className="px-1 py-3 font-medium align-top text-xs md:text-sm md:px-6">
+                      <div className="flex items-center justify-center gap-1 md:justify-start">
+                        <span>Pre-Attendance</span>
+                        <button onClick={() => toggleFilter('preAttendance')} className="p-1 hover:text-gray-900">
+                          <Filter className={cn("h-3 w-3", filters.preAttendance !== 'All' ? "text-black fill-black" : "text-gray-400")} />
+                        </button>
+                      </div>
+                      {visibleFilters.preAttendance && (
+                        <select
+                          value={filters.preAttendance}
+                          onChange={(e) => setFilters({ ...filters, preAttendance: e.target.value })}
+                          className="mt-2 w-full rounded border border-gray-200 px-2 py-1 text-xs font-normal focus:border-black focus:outline-none"
+                          autoFocus
+                        >
+                          <option value="All">All</option>
+                          <option value="Present">Present</option>
+                          <option value="Absent">Absent</option>
+                          <option value="None">Not marked</option>
+                        </select>
+                      )}
+                    </th>
+                  )}
                   <th className="px-1 py-3 font-medium align-top text-xs md:text-sm md:px-6 w-[25%] md:w-auto">
                     <div className="flex items-center justify-center gap-1 md:justify-start">
                       <button
@@ -616,6 +650,11 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
                           <span className="text-gray-500 text-[10px] md:text-sm">{formatTo12Hour(record.time)}</span>
                         </div>
                       </td>
+                      {showPreAttendance && (
+                        <td className="px-1 py-3 text-center md:text-left md:px-6">
+                          <PreAttendanceBadge status={preAttendanceStatus[record.user.id]} />
+                        </td>
+                      )}
                       <td className="px-1 py-3 text-center md:text-left md:px-6">
                         <span
                           className={cn(
@@ -641,7 +680,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={showPreAttendance ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
                       No records match your filters.
                     </td>
                   </tr>

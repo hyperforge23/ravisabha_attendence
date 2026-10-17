@@ -7,6 +7,8 @@ import axios from 'axios';
 
 interface AttendanceContextType {
   records: AttendanceRecord[];
+  preAttendanceStatus: Record<string, "Present" | "Absent">;
+  showPreAttendance: boolean;
   addRecord: (record: AttendanceRecord) => void;
   updateRecordStatus: (id: string, status: AttendanceStatus) => void;
   removeRecord: (id: string) => void;
@@ -19,6 +21,33 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const ravisabhaId = searchParams?.get('ravisabhaId');
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [preAttendanceStatus, setPreAttendanceStatus] = useState<Record<string, "Present" | "Absent">>({});
+
+  const fetchPreAttendance = async () => {
+    if (!ravisabhaId) {
+      setPreAttendanceStatus({});
+      return;
+    }
+
+    try {
+      const { data } = await axios.get('/api/pre-attendance', {
+        params: { ravisabhaId },
+      });
+
+      const statusMap: Record<string, "Present" | "Absent"> = {};
+      for (const record of data.records || []) {
+        const smkDetailId = record.smkDetailId ? String(record.smkDetailId) : "";
+        if (!smkDetailId) continue;
+        if (record.status === "Present" || record.status === "Absent") {
+          statusMap[smkDetailId] = record.status;
+        }
+      }
+      setPreAttendanceStatus(statusMap);
+    } catch (error) {
+      console.error('Error fetching pre-attendance status:', error);
+      setPreAttendanceStatus({});
+    }
+  };
 
   const fetchRecords = async () => {
       try {
@@ -65,7 +94,9 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Clear records immediately when ravisabhaId changes to prevent showing stale data
     setRecords([]);
+    setPreAttendanceStatus({});
     fetchRecords();
+    fetchPreAttendance();
 }, [ravisabhaId]);
 
   const addRecord = (record: AttendanceRecord) => {
@@ -83,7 +114,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AttendanceContext.Provider value={{ records, addRecord, updateRecordStatus, removeRecord, refreshRecords: fetchRecords }}>
+    <AttendanceContext.Provider value={{ records, preAttendanceStatus, showPreAttendance: Boolean(ravisabhaId), addRecord, updateRecordStatus, removeRecord, refreshRecords: async () => { await Promise.all([fetchRecords(), fetchPreAttendance()]); } }}>
       {children}
     </AttendanceContext.Provider>
   );

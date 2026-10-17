@@ -34,6 +34,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   const [yajman, setYajman] = useState('');
   const [notes, setNotes] = useState('');
   const [preAttendance, setPreAttendance] = useState(false);
+  const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Pre-attendance live counts
@@ -87,7 +88,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
         const { data } = await axios.get('/api/pre-attendance', {
           params: { ravisabhaId: ravisabha._id },
         });
-        setDbEntryCount(data.totalEntries ?? 0);
+        setDbEntryCount(data.smkCount ?? 0);
         setTotalMehman(data.totalMehman ?? 0);
         setTotalFamily(data.totalFamily ?? 0);
       } catch (error) {
@@ -111,6 +112,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
         setYajman(ravisabha.yajman || '');
         setNotes(ravisabha.notes || '');
         setPreAttendance(ravisabha.pre_attendance ?? false);
+        setFormError('');
       } else {
         // Add mode: Set today's date when modal opens
         const today = new Date().toISOString().split('T')[0];
@@ -120,6 +122,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
         setYajman('');
         setNotes('');
         setPreAttendance(false);
+        setFormError('');
       }
     }
   }, [isOpen, ravisabha]);
@@ -127,8 +130,10 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    setFormError('');
+
     if (!date) {
-      toast.error('Date is required');
+      setFormError('Date is required');
       return;
     }
 
@@ -165,7 +170,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
     } catch (error: any) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} ravisabha:`, error);
       const errorMessage = error.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'add'} ravisabha`;
-      toast.error(errorMessage);
+      setFormError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -175,8 +180,8 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-6">
+      <div className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200">
+        <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between bg-white px-6 pt-6 pb-4">
           <h2 className="text-xl font-semibold text-gray-900">
             {isEditMode ? 'Edit Ravisabha' : 'Add New Ravisabha'}
           </h2>
@@ -188,7 +193,8 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <div className="space-y-4 px-6 pb-2">
           <div className="relative">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Date *</label>
             <div className="relative">
@@ -316,11 +322,11 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
                 <p className="text-sm text-blue-500">Loading...</p>
               ) : (
                 <div className="flex items-center gap-3 text-sm text-blue-700 flex-wrap">
-                  <span>Entries: <span className="font-semibold">{dbEntryCount}</span></span>
-                  <span>Mehman: <span className="font-semibold">{totalMehman}</span></span>
+                  <span>SMK: <span className="font-semibold">{dbEntryCount}</span></span>
                   <span>Family: <span className="font-semibold">{totalFamily}</span></span>
+                  <span>Mehman: <span className="font-semibold">{totalMehman}</span></span>
                   <span className="ml-auto text-base font-bold text-blue-900">
-                    Total: {dbEntryCount + totalMehman + totalFamily}
+                    Total: {dbEntryCount + totalFamily + totalMehman}
                   </span>
                 </div>
               )}
@@ -338,7 +344,10 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
                 type="button"
                 role="switch"
                 aria-checked={preAttendance}
-                onClick={() => setPreAttendance((prev) => !prev)}
+                onClick={() => {
+                  setPreAttendance((prev) => !prev);
+                  setFormError('');
+                }}
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                   preAttendance ? 'bg-green-500 focus:ring-green-500' : 'bg-red-400 focus:ring-red-400'
                 }`}
@@ -356,27 +365,37 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
           </div>
 
 
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting
-                ? isEditMode
-                  ? 'Updating...'
-                  : 'Adding...'
-                : isEditMode
-                  ? 'Update Ravisabha'
-                  : 'Add Ravisabha'}
-            </button>
+          </div>
+
+          <div className="sticky bottom-0 space-y-3 border-t border-gray-100 bg-white px-6 pt-4 pb-6">
+            {formError && (
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {formError}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? isEditMode
+                    ? 'Updating...'
+                    : 'Adding...'
+                  : isEditMode
+                    ? 'Update Ravisabha'
+                    : 'Add Ravisabha'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

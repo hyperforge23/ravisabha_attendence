@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { AttendanceRecord, User as UserType } from '@/lib/types';
-import { downloadCSV } from '@/lib/csv';
+import { downloadCSV, CsvRecord } from '@/lib/csv';
 import { cn, formatTo12Hour, formatIndianCurrency } from '@/lib/utils';
 import { Download, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight, Calendar, User, Utensils, StickyNote } from 'lucide-react';
 import SearchSection from '@/components/SearchSection';
 import axios from 'axios';
+import { toast } from 'sonner';
+
+type RavisabhaReport = 'attendance' | 'pre-absent-attended' | 'pre-present-missing' | 'pre-not-added';
 
 type SortKey = 'name' | 'smkNo' | 'mobileNo' | 'dateTime' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -26,6 +29,7 @@ interface Ravisabha {
   yajman?: string;
   notes?: string;
   attendanceCount?: number;
+  preAttendanceCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -39,7 +43,7 @@ export default function ExportPage() {
   const [isLoadingRavisabhas, setIsLoadingRavisabhas] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [exportingRavisabhaId, setExportingRavisabhaId] = useState<string | null>(null);
+  const [exportingReport, setExportingReport] = useState<{ id: string; kind: RavisabhaReport } | null>(null);
   
   // Person search state
   const [selectedPerson, setSelectedPerson] = useState<UserType | null>(null);
@@ -252,6 +256,8 @@ export default function ExportPage() {
               subZoneName: record.smkDetailId.SubZoneName,
               subZoneNameGuj: record.smkDetailId.SubZoneNameGuj,
               kutumbId: record.smkDetailId.KutumbId,
+              familyLeaderNameEng: record.smkDetailId.FamilyLeaderNameEng || '',
+              familyLeaderNameGuj: record.smkDetailId.FamilyLeaderNameGuj || '',
             },
             status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
             date: record.date.split('T')[0],
@@ -411,63 +417,138 @@ export default function ExportPage() {
     downloadCSV(filteredAndSortedRecords, filename);
   };
 
-  const handleExportRavisabha = async (ravisabhaId: string) => {
-    setExportingRavisabhaId(ravisabhaId);
+  const mapSmkUser = (smk: any) => ({
+    id: String(smk._id),
+    firstName: smk.FirstName || '',
+    middleName: smk.MiddleName || '',
+    lastName: smk.LastName || '',
+    smkNo: smk.SmkId || '',
+    mobileNo: smk.MobileNo?.toString() || '',
+    firstNameGuj: smk.FirstNameGuj || '',
+    middleNameGuj: smk.MiddleNameGuj || '',
+    lastNameGuj: smk.LastNameGuj || '',
+    gender: smk.Gender?.toString(),
+    bhaktId: smk.BhaktId,
+    age: smk.age,
+    presentVillageEng: smk.PresentVillageEng || '',
+    presentVillageGuj: smk.PresentVillageGuj || '',
+    nativeEng: smk.NativeEng || '',
+    nativeGuj: smk.NativeGuj || '',
+    zoneName: smk.ZoneName || '',
+    zoneNameGuj: smk.ZoneNameGuj || '',
+    subZoneName: smk.SubZoneName || '',
+    subZoneNameGuj: smk.SubZoneNameGuj || '',
+    kutumbId: smk.KutumbId,
+    familyLeaderNameEng: smk.FamilyLeaderNameEng || '',
+    familyLeaderNameGuj: smk.FamilyLeaderNameGuj || '',
+  });
+
+  const handleExportRavisabha = async (ravisabhaId: string, kind: RavisabhaReport = 'attendance') => {
+    setExportingReport({ id: ravisabhaId, kind });
     try {
-      // Find the ravisabha to get its date
       const ravisabha = ravisabhas.find((r) => r._id === ravisabhaId);
-      
-      const { data } = await axios.get('/api/attendance', {
-        params: {
-          ravisabhaId: ravisabhaId,
-        },
-      });
-      
-      if (!data || !data.records) {
+      const dateSlug = ravisabha ? formatDateForFilename(ravisabha.date) : 'export';
+
+      if (kind === 'pre-not-added') {
+        const { data } = await axios.get('/api/pre-attendance', {
+          params: { ravisabhaId, missing: 'smk' },
+        });
+        const reportRecords: CsvRecord[] = (data.users || []).map((user: any) => ({
+          id: String(user._id),
+          user: mapSmkUser(user),
+          status: 'Not added',
+          date: ravisabha ? ravisabha.date.split('T')[0] : '',
+          time: '',
+          timestamp: 0,
+        }));
+
+        if (reportRecords.length === 0) {
+          toast.info('No people match this report');
+          return;
+        }
+
+        downloadCSV(reportRecords, `pre_attendance_pending_${dateSlug}.csv`);
         return;
       }
-      
-      const mappedRecords: AttendanceRecord[] = data.records
+
+      const attendanceRequest = axios.get('/api/attendance', {
+        params: { ravisabhaId },
+      });
+      const preAttendanceRequest = kind === 'attendance'
+        ? null
+        : axios.get('/api/pre-attendance', {
+            params: { ravisabhaId, populate: 'smk' },
+          });
+
+      const [attendanceResponse, preAttendanceResponse] = await Promise.all([
+        attendanceRequest,
+        preAttendanceRequest,
+      ]);
+
+      const attendanceRecords: CsvRecord[] = (attendanceResponse.data?.records || [])
         .filter((record: any) => record.smkDetailId)
         .map((record: any) => ({
           id: record._id,
-          user: {
-            id: record.smkDetailId._id,
-            firstName: record.smkDetailId.FirstName,
-            middleName: record.smkDetailId.MiddleName,
-            lastName: record.smkDetailId.LastName,
-            smkNo: record.smkDetailId.SmkId,
-            mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-            firstNameGuj: record.smkDetailId.FirstNameGuj,
-            middleNameGuj: record.smkDetailId.MiddleNameGuj,
-            lastNameGuj: record.smkDetailId.LastNameGuj,
-            gender: record.smkDetailId.Gender?.toString(),
-            bhaktId: record.smkDetailId.BhaktId,
-            age: record.smkDetailId.age,
-            presentVillageEng: record.smkDetailId.PresentVillageEng,
-            presentVillageGuj: record.smkDetailId.PresentVillageGuj,
-            nativeEng: record.smkDetailId.NativeEng,
-            nativeGuj: record.smkDetailId.NativeGuj,
-            zoneName: record.smkDetailId.ZoneName,
-            zoneNameGuj: record.smkDetailId.ZoneNameGuj,
-            subZoneName: record.smkDetailId.SubZoneName,
-            subZoneNameGuj: record.smkDetailId.SubZoneNameGuj,
-            kutumbId: record.smkDetailId.KutumbId,
-          },
+          user: mapSmkUser(record.smkDetailId),
           status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
           date: record.date.split('T')[0],
           time: new Date(record.date).toTimeString().slice(0, 5),
           timestamp: new Date(record.date).getTime(),
         }));
 
-      const filename = ravisabha 
-        ? `attendance_${formatDateForFilename(ravisabha.date)}.csv`
-        : 'attendance_export.csv';
-      downloadCSV(mappedRecords, filename);
+      if (kind === 'attendance') {
+        downloadCSV(attendanceRecords, `attendance_${dateSlug}.csv`);
+        return;
+      }
+
+      const attendedIds = new Set(attendanceRecords.map((record) => String(record.user.id)));
+      const attendanceById = new Map(attendanceRecords.map((record) => [String(record.user.id), record]));
+      const preRecords = (preAttendanceResponse?.data?.records || []).filter(
+        (record: any) => record.smkDetailId && typeof record.smkDetailId === 'object'
+      );
+
+      let reportRecords: CsvRecord[] = [];
+      let filename = `attendance_${dateSlug}.csv`;
+
+      if (kind === 'pre-absent-attended') {
+        reportRecords = preRecords
+          .filter((record: any) => record.status === 'Absent' && attendedIds.has(String(record.smkDetailId._id)))
+          .map((record: any) => {
+            const attendance = attendanceById.get(String(record.smkDetailId._id))!;
+            return {
+              ...attendance,
+              preAttendanceStatus: 'Absent',
+              attendanceStatus: attendance.status,
+            };
+          });
+        filename = `pre_absent_attended_${dateSlug}.csv`;
+      } else {
+        reportRecords = preRecords
+          .filter((record: any) => record.status === 'Present' && !attendedIds.has(String(record.smkDetailId._id)))
+          .map((record: any) => ({
+            id: String(record._id),
+            user: mapSmkUser(record.smkDetailId),
+            status: 'Not Attended',
+            date: ravisabha ? ravisabha.date.split('T')[0] : '',
+            time: '',
+            timestamp: 0,
+            preAttendanceStatus: 'Present',
+            attendanceStatus: 'No attendance',
+          }));
+        filename = `pre_present_not_attended_${dateSlug}.csv`;
+      }
+
+      if (reportRecords.length === 0) {
+        toast.info('No people match this report');
+        return;
+      }
+
+      downloadCSV(reportRecords, filename);
     } catch (error) {
       console.error('Error exporting ravisabha records:', error);
+      toast.error('Failed to export report');
     } finally {
-      setExportingRavisabhaId(null);
+      setExportingReport(null);
     }
   };
 
@@ -604,9 +685,15 @@ export default function ExportPage() {
                           </div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-3">{formatDate(ravisabha.date)}</h3>
                           <div className="mb-3 pb-3 border-b border-gray-100">
-                            <div className="text-sm font-medium text-gray-700">
-                              <span>Attendance:</span>
-                              <span className="text-gray-900"> {ravisabha.attendanceCount || 0}</span>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-medium text-gray-700">
+                              <span>
+                                Attendance:
+                                <span className="text-gray-900"> {ravisabha.attendanceCount || 0}</span>
+                              </span>
+                              <span>
+                                Pre-Attendance:
+                                <span className="text-gray-900"> {ravisabha.preAttendanceCount || 0}</span>
+                              </span>
                             </div>
                           </div>
                           {ravisabha.yajman && (
@@ -631,17 +718,30 @@ export default function ExportPage() {
                           )}
                         </div>
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleExportRavisabha(ravisabha._id);
-                        }}
-                        disabled={exportingRavisabhaId === ravisabha._id}
-                        className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Download className="h-4 w-4" />
-                        {exportingRavisabhaId === ravisabha._id ? 'Exporting...' : 'Export'}
-                      </button>
+                      <div className="mt-4 flex flex-col gap-2">
+                        {([
+                          { kind: 'attendance' as const, label: 'Export Attendance', className: 'bg-green-600 text-white hover:bg-green-700' },
+                          { kind: 'pre-absent-attended' as const, label: 'Export Absent but Attended', className: 'border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100' },
+                          { kind: 'pre-present-missing' as const, label: 'Export Present, Not Attended', className: 'border border-blue-300 bg-blue-50 text-blue-900 hover:bg-blue-100' },
+                          { kind: 'pre-not-added' as const, label: 'Export Yet to Add Pre-Attendance', className: 'border border-gray-300 bg-white text-gray-800 hover:bg-gray-50' },
+                        ]).map((report) => {
+                          const isExporting = exportingReport?.id === ravisabha._id && exportingReport.kind === report.kind;
+                          return (
+                            <button
+                              key={report.kind}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExportRavisabha(ravisabha._id, report.kind);
+                              }}
+                              disabled={exportingReport?.id === ravisabha._id}
+                              className={`w-full flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${report.className}`}
+                            >
+                              <Download className="h-4 w-4" />
+                              {isExporting ? 'Exporting...' : report.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
