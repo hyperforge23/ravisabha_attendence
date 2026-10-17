@@ -69,7 +69,7 @@ export default function Home() {
         </div>
       )}
 
-      <SearchSection onSelectUser={handleSelectUser} />
+      <SearchSection onSelectUser={handleSelectUser} showAddUser={false} />
 
       <UserCard
         key={selectionKey}
