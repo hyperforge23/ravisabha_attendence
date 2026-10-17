@@ -13,6 +13,7 @@ export interface User {
   age?: number;
   presentVillageEng?: string;
   presentVillageGuj?: string;
+  addressDescription?: string;
   nativeEng?: string;
   nativeGuj?: string;
   zoneName?: string;
@@ -22,6 +23,7 @@ export interface User {
   kutumbId?: number;
   familyLeaderNameEng?: string;
   familyLeaderNameGuj?: string;
+  isMainPersonInFamily?: boolean;
 }
 
 export type AttendanceStatus = "Present" | "Absent";

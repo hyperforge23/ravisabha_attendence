@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:non-smk": "node scripts/migrate-non-smk-candidates.mjs",
+    "migrate:non-smk:execute": "node scripts/migrate-non-smk-candidates.mjs --execute",
+    "seed:kutumb-test": "node scripts/seed-kutumb-test-attendance.mjs --execute --reset"
   },
   "dependencies": {
     "axios": "^1.13.2",

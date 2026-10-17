@@ -21,8 +21,10 @@ export interface ISmkDetail extends Document {
   SubZoneName: string;
   SubZoneNameGuj: string;
   KutumbId: number;
+  AddressDescription?: string;
   FamilyLeaderNameEng?: string;
   FamilyLeaderNameGuj?: string;
+  IsMainPersonInFamily?: boolean;
 }
 
 const SmkDetailSchema: Schema<ISmkDetail> = new Schema(
@@ -47,8 +49,10 @@ const SmkDetailSchema: Schema<ISmkDetail> = new Schema(
     SubZoneName: { type: String },
     SubZoneNameGuj: { type: String },
     KutumbId: { type: Number },
+    AddressDescription: { type: String },
     FamilyLeaderNameEng: { type: String },
     FamilyLeaderNameGuj: { type: String },
+    IsMainPersonInFamily: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -57,6 +61,11 @@ const SmkDetailSchema: Schema<ISmkDetail> = new Schema(
 );
 
 const SmkDetail: Model<ISmkDetail> =
-  mongoose.models.smkdetails || mongoose.model<ISmkDetail>("smkdetails", SmkDetailSchema);
+  (mongoose.models.smkdetails as Model<ISmkDetail> | undefined) ??
+  mongoose.model<ISmkDetail>("smkdetails", SmkDetailSchema);
+
+if (!SmkDetail.schema.path("AddressDescription")) {
+  SmkDetail.schema.add({ AddressDescription: { type: String } });
+}
 
 export default SmkDetail;

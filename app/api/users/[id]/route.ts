@@ -27,6 +27,9 @@ export async function GET(
       gender: user.Gender?.toString(),
       age: user.age,
       presentVillageEng: user.PresentVillageEng,
+      addressDescription: user.AddressDescription || "",
+      kutumbId: user.KutumbId,
+      isMainPersonInFamily: user.IsMainPersonInFamily === true,
     };
 
     return NextResponse.json({ user: formattedUser }, { status: 200 });
@@ -58,6 +61,7 @@ export async function PUT(
       gender,
       age,
       presentVillageEng,
+      addressDescription,
     } = body;
 
     // Validate required fields
@@ -85,21 +89,34 @@ export async function PUT(
       }
     }
 
-    // Update user
-    const updatedUser = await SmkDetail.findByIdAndUpdate(
-      id,
-      {
-        FirstName: firstName,
-        MiddleName: middleName || "",
-        LastName: lastName,
-        SmkId: smkNo || existingUser.SmkId,
-        Gender: gender ? parseInt(gender) : existingUser.Gender,
-        age: age ? parseInt(age) : existingUser.age,
-        MobileNo: mobileNo ? parseInt(mobileNo) : existingUser.MobileNo,
-        PresentVillageEng: presentVillageEng || existingUser.PresentVillageEng,
-      },
-      { new: true, runValidators: true }
+    const updateFields = {
+      FirstName: firstName,
+      MiddleName: middleName || "",
+      LastName: lastName,
+      SmkId: smkNo || existingUser.SmkId,
+      Gender: gender ? parseInt(gender) : existingUser.Gender,
+      age: age !== undefined && age !== "" ? parseInt(age, 10) : existingUser.age,
+      MobileNo: mobileNo ? parseInt(mobileNo, 10) : existingUser.MobileNo,
+      PresentVillageEng: presentVillageEng ?? existingUser.PresentVillageEng ?? "",
+      AddressDescription:
+        addressDescription !== undefined
+          ? addressDescription
+          : existingUser.AddressDescription ?? "",
+    };
+
+    const updateResult = await SmkDetail.updateOne(
+      { _id: id },
+      { $set: updateFields }
     );
+
+    if (updateResult.matchedCount === 0) {
+      return NextResponse.json(
+        { message: "Failed to update user" },
+        { status: 500 }
+      );
+    }
+
+    const updatedUser = await SmkDetail.findById(id);
 
     if (!updatedUser) {
       return NextResponse.json(
@@ -119,6 +136,10 @@ export async function PUT(
       middleNameGuj: updatedUser.MiddleNameGuj,
       lastNameGuj: updatedUser.LastNameGuj,
       gender: updatedUser.Gender?.toString(),
+      presentVillageEng: updatedUser.PresentVillageEng || "",
+      addressDescription: updatedUser.AddressDescription || "",
+      kutumbId: updatedUser.KutumbId,
+      isMainPersonInFamily: updatedUser.IsMainPersonInFamily === true,
     };
 
     return NextResponse.json(
@@ -162,6 +183,22 @@ export async function DELETE(
         },
         { status: 409 }
       );
+    }
+
+    if (user.IsMainPersonInFamily && user.KutumbId) {
+      const familyMemberCount = await SmkDetail.countDocuments({
+        KutumbId: user.KutumbId,
+        _id: { $ne: user._id },
+      });
+      if (familyMemberCount > 0) {
+        return NextResponse.json(
+          {
+            message: `Cannot delete the main person while ${familyMemberCount} family member(s) are linked to Kutumb ${user.KutumbId}.`,
+            familyMemberCount,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Delete user

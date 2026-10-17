@@ -38,9 +38,10 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Pre-attendance live counts
-  const [dbEntryCount, setDbEntryCount] = useState(0);
+  const [smkPresentCount, setSmkPresentCount] = useState(0);
+  const [smkAbsentCount, setSmkAbsentCount] = useState(0);
   const [totalMehman, setTotalMehman] = useState(0);
-  const [totalFamily, setTotalFamily] = useState(0);
+  const [totalNonSmk, setTotalNonSmk] = useState(0);
   const [isFetchingCounts, setIsFetchingCounts] = useState(false);
 
   // Search State
@@ -88,9 +89,10 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
         const { data } = await axios.get('/api/pre-attendance', {
           params: { ravisabhaId: ravisabha._id },
         });
-        setDbEntryCount(data.smkCount ?? 0);
+        setSmkPresentCount(data.smkPresentCount ?? data.smkCount ?? 0);
+        setSmkAbsentCount(data.smkAbsentCount ?? 0);
         setTotalMehman(data.totalMehman ?? 0);
-        setTotalFamily(data.totalFamily ?? 0);
+        setTotalNonSmk(data.totalNonSmk ?? data.totalFamily ?? 0);
       } catch (error) {
         console.error('Error fetching pre-attendance counts:', error);
       } finally {
@@ -102,6 +104,14 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
   }, [isOpen, isEditMode, ravisabha?._id]);
 
   useEffect(() => {
+    if (!isOpen) {
+      setSmkPresentCount(0);
+      setSmkAbsentCount(0);
+      setTotalMehman(0);
+      setTotalNonSmk(0);
+      return;
+    }
+
     if (isOpen) {
       if (ravisabha) {
         // Edit mode: populate with existing data
@@ -321,12 +331,24 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
               {isFetchingCounts ? (
                 <p className="text-sm text-blue-500">Loading...</p>
               ) : (
-                <div className="flex items-center gap-3 text-sm text-blue-700 flex-wrap">
-                  <span>SMK: <span className="font-semibold">{dbEntryCount}</span></span>
-                  <span>Family: <span className="font-semibold">{totalFamily}</span></span>
-                  <span>Mehman: <span className="font-semibold">{totalMehman}</span></span>
+                <div className="flex items-center gap-x-3 gap-y-1 text-sm text-blue-700 flex-wrap">
+                  <span>
+                    Present:{' '}
+                    <span className="font-semibold">{smkPresentCount}</span>
+                  </span>
+                  <span>
+                    Absent:{' '}
+                    <span className="font-semibold">{smkAbsentCount}</span>
+                  </span>
+                  <span>
+                    Family Count:{' '}
+                    <span className="font-semibold">{totalNonSmk}</span>
+                  </span>
+                  <span>
+                    Mehman: <span className="font-semibold">{totalMehman}</span>
+                  </span>
                   <span className="ml-auto text-base font-bold text-blue-900">
-                    Total: {dbEntryCount + totalFamily + totalMehman}
+                    Total: {smkPresentCount + totalNonSmk + totalMehman}
                   </span>
                 </div>
               )}

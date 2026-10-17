@@ -57,15 +57,28 @@ export async function GET(request: Request) {
     }
     const records = await preAttendanceQuery.lean();
 
-    const isPresentSmkRecord = (record: { smkDetailId?: unknown; SmkId?: string; status?: string }) =>
-      record.status !== "Absent" && Boolean(record.smkDetailId || record.SmkId);
+    const isSmkRecord = (record: { smkDetailId?: unknown; SmkId?: string }) =>
+      Boolean(record.smkDetailId || record.SmkId);
 
-    const smkCount = records.filter(isPresentSmkRecord).length;
+    const smkPresentCount = records.filter(
+      (r) => isSmkRecord(r) && r.status !== "Absent"
+    ).length;
+    const smkAbsentCount = records.filter(
+      (r) => isSmkRecord(r) && r.status === "Absent"
+    ).length;
     const totalMehman = records.reduce((sum, r) => sum + (r.mehmanCount ?? 0), 0);
-    const totalFamily = records.reduce((sum, r) => sum + (r.familyCount ?? 0), 0);
+    const totalNonSmk = records.reduce((sum, r) => sum + (r.familyCount ?? 0), 0);
 
     return NextResponse.json(
-      { records, smkCount, totalMehman, totalFamily },
+      {
+        records,
+        smkCount: smkPresentCount,
+        smkPresentCount,
+        smkAbsentCount,
+        totalMehman,
+        totalFamily: totalNonSmk,
+        totalNonSmk,
+      },
       { status: 200 }
     );
   } catch (error) {

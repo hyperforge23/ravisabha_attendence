@@ -3,7 +3,17 @@
 import { useState, useEffect } from 'react';
 import { X, UserPlus, Loader2 } from 'lucide-react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import { User } from '@/lib/types';
+
+type AddMode = 'main' | 'member';
+
+const MIN_DISTINCT_RAVISABHAS_FOR_KUTUMB = 3;
+
+interface Candidate extends User {
+  attendanceCount: number;
+  eligible: boolean;
+}
 
 interface AddUserModalProps {
   isOpen: boolean;
@@ -29,10 +39,19 @@ export default function AddUserModal({
     gender: editUser?.gender || '1',
     age: '',
     presentVillageEng: '',
+    addressDescription: '',
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mode, setMode] = useState<AddMode>('main');
+  const [lookupQuery, setLookupQuery] = useState('');
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [mainPersons, setMainPersons] = useState<User[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedMainPerson, setSelectedMainPerson] = useState<User | null>(null);
+  const [existingKutumbMain, setExistingKutumbMain] = useState<User | null>(null);
   const isEditMode = !!editUser;
 
   // Populate form when editing
@@ -51,6 +70,7 @@ export default function AddUserModal({
             gender: user.gender || '1',
             age: user.age?.toString() || '',
             presentVillageEng: user.presentVillageEng || '',
+            addressDescription: user.addressDescription || '',
           });
         } catch (error) {
           console.error('Error fetching user details:', error);
@@ -64,6 +84,7 @@ export default function AddUserModal({
             gender: editUser.gender || '1',
             age: '',
             presentVillageEng: '',
+            addressDescription: '',
           });
         }
       } else if (initialFirstName) {
@@ -76,6 +97,7 @@ export default function AddUserModal({
           gender: '1',
           age: '',
           presentVillageEng: '',
+          addressDescription: '',
         });
       }
     };
@@ -83,8 +105,122 @@ export default function AddUserModal({
     fetchUserDetails();
   }, [editUser, initialFirstName]);
 
+  useEffect(() => {
+    if (isEditMode || lookupQuery.trim().length < 2) {
+      setCandidates([]);
+      setMainPersons([]);
+      setExistingKutumbMain(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsLookingUp(true);
+      try {
+        if (mode === 'main') {
+          const { data } = await axios.get('/api/users/candidates', {
+            params: { query: lookupQuery },
+          });
+          setCandidates(data.candidates || []);
+          setExistingKutumbMain(data.existingKutumbMain || null);
+          setMainPersons([]);
+        } else {
+          const { data } = await axios.get('/api/users/households', {
+            params: { query: lookupQuery },
+          });
+          setMainPersons(data.mainPersons || []);
+          setCandidates([]);
+          setExistingKutumbMain(null);
+        }
+      } catch {
+        setCandidates([]);
+        setMainPersons([]);
+        setExistingKutumbMain(null);
+      } finally {
+        setIsLookingUp(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [isEditMode, lookupQuery, mode]);
+
+  const emptyPersonalForm = {
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    smkNo: '',
+    mobileNo: '',
+    gender: '1',
+    age: '',
+    presentVillageEng: '',
+    addressDescription: '',
+  };
+
+  const resetSelection = (nextMode: AddMode) => {
+    setMode(nextMode);
+    setLookupQuery('');
+    setCandidates([]);
+    setMainPersons([]);
+    setSelectedCandidate(null);
+    setSelectedMainPerson(null);
+    setExistingKutumbMain(null);
+    setError('');
+    setFormData(emptyPersonalForm);
+  };
+
+  const clearKutumbContext = () => {
+    setSelectedMainPerson(null);
+    setLookupQuery('');
+    setMainPersons([]);
+    setError('');
+    setFormData(emptyPersonalForm);
+  };
+
+  useEffect(() => {
+    if (!isOpen && !isEditMode) {
+      resetSelection('main');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when modal closes
+  }, [isOpen, isEditMode]);
+
+  const selectCandidate = (candidate: Candidate) => {
+    setSelectedCandidate(candidate);
+    setLookupQuery('');
+    setCandidates([]);
+    setFormData({
+      firstName: candidate.firstName,
+      middleName: candidate.middleName || '',
+      lastName: candidate.lastName,
+      smkNo: candidate.smkNo,
+      mobileNo: candidate.mobileNo,
+      gender: candidate.gender || '1',
+      age: candidate.age?.toString() || '',
+      presentVillageEng: candidate.presentVillageEng || '',
+      addressDescription: candidate.addressDescription || '',
+    });
+  };
+
+  const selectMainPerson = (person: User) => {
+    setSelectedMainPerson(person);
+    setLookupQuery('');
+    setMainPersons([]);
+  };
+
+  const openFamilyMemberForMain = (person: User) => {
+    setMode('member');
+    setSelectedCandidate(null);
+    setCandidates([]);
+    setExistingKutumbMain(null);
+    setSelectedMainPerson(person);
+    setLookupQuery('');
+    setMainPersons([]);
+    setError('');
+    setFormData(emptyPersonalForm);
+  };
+
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
@@ -98,6 +234,20 @@ export default function AddUserModal({
       setError('First name and last name are required');
       return;
     }
+    if (!isEditMode && mode === 'main' && !selectedCandidate) {
+      setError('Select an existing Non-SMK candidate');
+      return;
+    }
+    if (!isEditMode && mode === 'main' && !selectedCandidate?.eligible) {
+      setError(
+        `Main person must have attendance at at least ${MIN_DISTINCT_RAVISABHAS_FOR_KUTUMB} distinct ravisabhas`
+      );
+      return;
+    }
+    if (!isEditMode && mode === 'member' && !selectedMainPerson) {
+      setError('Select a household main person');
+      return;
+    }
 
     setIsLoading(true);
 
@@ -107,22 +257,40 @@ export default function AddUserModal({
         const response = await axios.put(`/api/users/${editUser.id}`, formData);
         data = response.data;
       } else {
-        const response = await axios.post('/api/users', formData);
+        const response = await axios.post('/api/users', {
+          ...formData,
+          mode,
+          candidateId: selectedCandidate?.id,
+          mainPersonId: selectedMainPerson?.id,
+        });
         data = response.data;
       }
       onUserAdded(data.user);
-      onClose();
-      // Reset form
-      setFormData({
-        firstName: '',
-        middleName: '',
-        lastName: '',
-        smkNo: '',
-        mobileNo: '',
-        gender: '1',
-        age: '',
-        presentVillageEng: '',
-      });
+
+      if (!isEditMode && mode === 'main') {
+        const kutumbLabel =
+          data.user.kutumbId != null ? ` (Kutumb ${data.user.kutumbId})` : '';
+        toast.success(
+          data.message ||
+            `Kutumb created successfully${kutumbLabel}. Add family members below.`
+        );
+        setMode('member');
+        setSelectedMainPerson(data.user);
+        setFormData(emptyPersonalForm);
+        setSelectedCandidate(null);
+        setLookupQuery('');
+        setCandidates([]);
+        setMainPersons([]);
+      } else if (!isEditMode && mode === 'member') {
+        toast.success(
+          data.message ||
+            `Family member added to Kutumb ${selectedMainPerson?.kutumbId ?? ''}. Add another or clear Kutumb when done.`.trim()
+        );
+        setFormData(emptyPersonalForm);
+      } else {
+        setFormData(emptyPersonalForm);
+        onClose();
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.message || 'Failed to add user. Please try again.'
@@ -144,7 +312,11 @@ export default function AddUserModal({
               <UserPlus className="h-5 w-5 text-blue-600" />
             </div>
             <h2 className="text-xl font-semibold text-gray-900">
-              {isEditMode ? 'Edit User' : 'Add New User'}
+              {isEditMode
+                ? 'Edit User'
+                : mode === 'main'
+                  ? 'Create Non-SMK Kutumb'
+                  : 'Add Family Member'}
             </h2>
           </div>
           <button
@@ -161,6 +333,186 @@ export default function AddUserModal({
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
               {error}
+            </div>
+          )}
+
+          {!isEditMode && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => resetSelection('main')}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    mode === 'main'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Main Person
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resetSelection('member')}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                    mode === 'member'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Family Member
+                </button>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  {mode === 'main'
+                    ? 'Search existing Non-SMK candidate'
+                    : 'Search household main person'}
+                </label>
+                <input
+                  type="text"
+                  value={lookupQuery}
+                  onChange={(event) => setLookupQuery(event.target.value)}
+                  placeholder={
+                    mode === 'main'
+                      ? 'Name, mobile, or Non-SMK ID'
+                      : 'Name, mobile, or Kutumb ID'
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                />
+                {isLookingUp && (
+                  <p className="mt-2 text-xs text-gray-500">Searching...</p>
+                )}
+                {(candidates.length > 0 || mainPersons.length > 0) && (
+                  <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                    {mode === 'main'
+                      ? candidates.map((candidate) => (
+                          <button
+                            type="button"
+                            key={candidate.id}
+                            onClick={() => selectCandidate(candidate)}
+                            className="flex w-full items-center justify-between border-b border-gray-100 px-3 py-2 text-left last:border-0 hover:bg-gray-50"
+                          >
+                            <span>
+                              <span className="block text-sm font-medium text-gray-900">
+                                {candidate.firstName} {candidate.middleName} {candidate.lastName}
+                              </span>
+                              <span className="block text-xs text-gray-500">
+                                {candidate.smkNo} · {candidate.mobileNo || 'No mobile'}
+                              </span>
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-1 text-xs font-medium ${
+                                candidate.eligible
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}
+                            >
+                              {candidate.attendanceCount}/{MIN_DISTINCT_RAVISABHAS_FOR_KUTUMB}
+                            </span>
+                          </button>
+                        ))
+                      : mainPersons.map((person) => (
+                          <button
+                            type="button"
+                            key={person.id}
+                            onClick={() => selectMainPerson(person)}
+                            className="w-full border-b border-gray-100 px-3 py-2 text-left last:border-0 hover:bg-gray-50"
+                          >
+                            <span className="block text-sm font-medium text-gray-900">
+                              {person.firstName} {person.middleName} {person.lastName}
+                            </span>
+                            <span className="block text-xs text-gray-500">
+                              Kutumb {person.kutumbId} · {person.mobileNo || 'No mobile'}
+                            </span>
+                          </button>
+                        ))}
+                  </div>
+                )}
+                {!isLookingUp &&
+                  lookupQuery.trim().length >= 2 &&
+                  mode === 'main' &&
+                  candidates.length === 0 && (
+                    <div className="mt-2">
+                      {existingKutumbMain ? (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                          <p>
+                            <span className="font-medium">
+                              {existingKutumbMain.firstName}{' '}
+                              {existingKutumbMain.lastName}
+                            </span>{' '}
+                            already has Kutumb{' '}
+                            <span className="font-medium">
+                              {existingKutumbMain.kutumbId}
+                            </span>
+                            . Promoted people are not listed as candidates—use
+                            Family Member to add relatives.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openFamilyMemberForMain(existingKutumbMain)
+                            }
+                            className="mt-2 text-sm font-medium text-amber-950 underline hover:no-underline"
+                          >
+                            Switch to Family Member for this Kutumb
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          No Non-SMK candidates match this search. They may
+                          already have a Kutumb, or need more ravisabha
+                          attendance before creating one.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                {!isLookingUp &&
+                  lookupQuery.trim().length >= 2 &&
+                  mode === 'member' &&
+                  mainPersons.length === 0 && (
+                    <p className="mt-2 text-sm text-gray-500">
+                      No Kutumb main person found. Create a Kutumb under Main
+                      Person first, or search by Kutumb ID.
+                    </p>
+                  )}
+              </div>
+
+              {selectedCandidate && (
+                <div
+                  className={`rounded-lg border px-4 py-3 text-sm ${
+                    selectedCandidate.eligible
+                      ? 'border-green-200 bg-green-50 text-green-800'
+                      : 'border-amber-200 bg-amber-50 text-amber-800'
+                  }`}
+                >
+                  Selected {selectedCandidate.firstName} {selectedCandidate.lastName}.
+                  Attendance: {selectedCandidate.attendanceCount} distinct ravisabhas.
+                  {selectedCandidate.eligible
+                    ? ' Eligible to create a Kutumb.'
+                    : ` At least ${MIN_DISTINCT_RAVISABHAS_FOR_KUTUMB} are required.`}
+                </div>
+              )}
+
+              {selectedMainPerson && (
+                <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 sm:flex-row sm:items-center sm:justify-between">
+                  <p>
+                    Adding members to Kutumb{' '}
+                    <span className="font-semibold">
+                      {selectedMainPerson.kutumbId}
+                    </span>
+                    , main person {selectedMainPerson.firstName}{' '}
+                    {selectedMainPerson.lastName}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={clearKutumbContext}
+                    className="shrink-0 text-sm font-medium text-blue-900 underline hover:no-underline"
+                  >
+                    Clear Kutumb
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -260,19 +612,37 @@ export default function AddUserModal({
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Present Village
-                </label>
-                <input
-                  type="text"
-                  name="presentVillageEng"
-                  value={formData.presentVillageEng}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter present village"
-                />
-              </div>
+              {(isEditMode || mode !== 'member') && (
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Present Village
+                  </label>
+                  <input
+                    type="text"
+                    name="presentVillageEng"
+                    value={formData.presentVillageEng}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter present village"
+                  />
+                </div>
+              )}
+
+              {(isEditMode || mode !== 'member') && (
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <textarea
+                    name="addressDescription"
+                    value={formData.addressDescription}
+                    onChange={handleChange}
+                    rows={3}
+                    className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter full address"
+                  />
+                </div>
+              )}
 
               {/* <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -305,7 +675,15 @@ export default function AddUserModal({
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={
+                isLoading ||
+                (!isEditMode &&
+                  mode === 'main' &&
+                  (!selectedCandidate || !selectedCandidate.eligible)) ||
+                (!isEditMode &&
+                  mode === 'member' &&
+                  !selectedMainPerson?.id)
+              }
               className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {isLoading ? (
@@ -316,7 +694,11 @@ export default function AddUserModal({
               ) : (
                 <>
                   <UserPlus className="h-4 w-4" />
-                  {isEditMode ? 'Update User' : 'Add User'}
+                  {isEditMode
+                    ? 'Update User'
+                    : mode === 'main'
+                      ? 'Create Kutumb'
+                      : 'Add Family Member'}
                 </>
               )}
             </button>

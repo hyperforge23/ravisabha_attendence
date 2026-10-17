@@ -33,6 +33,7 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'Home', href: '/ravisabha' },
+    { name: 'Non-SMK', href: '/non-smk' },
     { name: 'Reports', href: '/export' },
   ];
 
