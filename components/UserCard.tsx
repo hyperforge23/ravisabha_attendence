@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Calendar, Clock, Edit2, Trash2, X } from 'lucide-react';
 import axios from 'axios';
 import AddUserModal from './AddUserModal';
+import PreAttendanceBadge from './PreAttendanceBadge';
 
 interface UserCardProps {
   user: User | null;
@@ -22,7 +23,7 @@ export default function UserCard({
   onClear,
   onUserUpdated,
 }: UserCardProps) {
-  const { refreshRecords, records } = useAttendance();
+  const { refreshRecords, records, preAttendanceStatus, showPreAttendance } = useAttendance();
   const { user: authUser } = useAuth();
 
   const [date, setDate] = useState('');
@@ -118,9 +119,12 @@ export default function UserCard({
                   </span>
                 )}
               </h3>
-              <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-500 sm:flex-row sm:gap-4">
+              <div className="mt-1 flex flex-col gap-1 text-sm text-gray-500 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
                 <span>SMK No : {user.smkNo}</span>
                 <span>Mobile No : {user.mobileNo}</span>
+                {showPreAttendance && (
+                  <PreAttendanceBadge status={preAttendanceStatus[user.id]} />
+                )}
               </div>
             </>
           ) : (

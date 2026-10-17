@@ -58,5 +58,30 @@ const RavisabhaDetails: Model<IRavisabhaDetails> =
   (mongoose.models.ravisabha_details as Model<IRavisabhaDetails>) ||
   mongoose.model<IRavisabhaDetails>("ravisabha_details", RavisabhaDetailsSchema);
 
+export async function getPreAttendanceConflictMessage(excludeId?: string) {
+  const filter: mongoose.FilterQuery<IRavisabhaDetails> = { pre_attendance: true };
+  if (excludeId) {
+    filter._id = { $ne: excludeId };
+  }
+
+  const active = await RavisabhaDetails.find(filter).select("date").lean();
+  if (active.length === 0) return null;
+
+  const dates = active.map((item) =>
+    new Date(item.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    })
+  );
+
+  if (dates.length === 1) {
+    return `Another ravisabha dated ${dates[0]} already has pre-attendance active`;
+  }
+
+  return `Other ravisabhas dated ${dates.join(", ")} already have pre-attendance active`;
+}
+
 export default RavisabhaDetails;
 

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
-import RavisabhaDetails from "@/models/RavisabhaDetails";
+import RavisabhaDetails, { getPreAttendanceConflictMessage } from "@/models/RavisabhaDetails";
 import Attendance from "@/models/Attendance";
+import PreAttendance from "@/models/PreAttendence";
 import mongoose from "mongoose";
 // Import all models to ensure they are registered
 import "@/models";
@@ -66,18 +67,53 @@ export async function GET(request: Request) {
     // Get attendance counts for each ravisabha
     const ravisabhaIds = ravisabhas.map((r: any) => new mongoose.Types.ObjectId(r._id));
     
-    const attendanceCounts = await Attendance.aggregate([
-      {
-        $match: {
-          ravisabhaId: { $in: ravisabhaIds }
+    const [attendanceCounts, preAttendanceCounts] = await Promise.all([
+      Attendance.aggregate([
+        {
+          $match: {
+            ravisabhaId: { $in: ravisabhaIds }
+          }
+        },
+        {
+          $group: {
+            _id: "$ravisabhaId",
+            count: { $sum: 1 }
+          }
         }
-      },
-      {
-        $group: {
-          _id: "$ravisabhaId",
-          count: { $sum: 1 }
+      ]),
+      PreAttendance.aggregate([
+        {
+          $match: {
+            ravisabhaId: { $in: ravisabhaIds }
+          }
+        },
+        {
+          $group: {
+            _id: "$ravisabhaId",
+            smk: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $ne: ["$status", "Absent"] },
+                      {
+                        $or: [
+                          { $ne: [{ $ifNull: ["$smkDetailId", null] }, null] },
+                          { $gt: [{ $strLenCP: { $ifNull: ["$SmkId", ""] } }, 0] },
+                        ],
+                      },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+            mehman: { $sum: { $ifNull: ["$mehmanCount", 0] } },
+            family: { $sum: { $ifNull: ["$familyCount", 0] } },
+          }
         }
-      }
+      ]),
     ]);
 
     // Create a map of ravisabhaId to count
@@ -88,10 +124,18 @@ export async function GET(request: Request) {
       ])
     );
 
+    const preCountMap = new Map(
+      preAttendanceCounts.map((item: any) => [
+        item._id.toString(),
+        (item.smk || 0) + (item.mehman || 0) + (item.family || 0),
+      ])
+    );
+
     // Add attendance count to each ravisabha
     const ravisabhasWithCounts = ravisabhas.map((ravisabha: any) => ({
       ...ravisabha,
-      attendanceCount: countMap.get(ravisabha._id.toString()) || 0
+      attendanceCount: countMap.get(ravisabha._id.toString()) || 0,
+      preAttendanceCount: preCountMap.get(ravisabha._id.toString()) || 0,
     }));
 
     return NextResponse.json({ ravisabhas: ravisabhasWithCounts }, { status: 200 });
@@ -116,6 +160,13 @@ export async function POST(request: Request) {
         { message: "Date is required" },
         { status: 400 }
       );
+    }
+
+    if (Boolean(pre_attendance)) {
+      const conflictMessage = await getPreAttendanceConflictMessage();
+      if (conflictMessage) {
+        return NextResponse.json({ message: conflictMessage }, { status: 409 });
+      }
     }
 
     const newRavisabha = new RavisabhaDetails({

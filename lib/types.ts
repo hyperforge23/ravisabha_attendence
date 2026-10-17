@@ -20,6 +20,8 @@ export interface User {
   subZoneName?: string;
   subZoneNameGuj?: string;
   kutumbId?: number;
+  familyLeaderNameEng?: string;
+  familyLeaderNameGuj?: string;
 }
 
 export type AttendanceStatus = "Present" | "Absent";

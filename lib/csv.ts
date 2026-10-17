@@ -12,24 +12,37 @@ const escapeCSV = (value: string | number | undefined | null): string => {
 };
 
 
-export const downloadCSV = (records: AttendanceRecord[], filename?: string) => {
+export type CsvRecord = AttendanceRecord & {
+  preAttendanceStatus?: string;
+  attendanceStatus?: string;
+};
+
+export const downloadCSV = (records: CsvRecord[], filename?: string) => {
+  const includeComparison = records.some(
+    (record) => record.preAttendanceStatus || record.attendanceStatus
+  );
   const headers = [
-    'First Name', 'Middle Name', 'Last Name', 
+    'Kutumb ID', 'SMK No',
+    'First Name', 'Middle Name', 'Last Name',
     'First Name (Guj)', 'Middle Name (Guj)', 'Last Name (Guj)',
-    'SMK No', 'Mobile No', 'Gender', 'Age',
-    'Bhakt ID', 'Present Village', 'Present Village (Guj)',
+    'Mobile No',
+    'Gender', 'Age', 'Bhakt ID',
+    'Present Village', 'Present Village (Guj)',
     'Native', 'Native (Guj)', 'Zone', 'Zone (Guj)',
-    'Sub Zone', 'Sub Zone (Guj)', 'Kutumb ID',
-    'Status', 'Date', 'Time'
+    'Sub Zone', 'Sub Zone (Guj)',
+    'Status', 'Date', 'Time',
+    ...(includeComparison ? ['Pre-Attendance', 'Attendance'] : []),
+    'Family Leader', 'Family Leader (Guj)',
   ];
   const rows = records.map((record) => [
+    record.user.kutumbId || '',
+    record.user.smkNo,
     record.user.firstName,
     record.user.middleName || '',
     record.user.lastName,
     record.user.firstNameGuj || '',
     record.user.middleNameGuj || '',
     record.user.lastNameGuj || '',
-    record.user.smkNo,
     record.user.mobileNo,
     record.user.gender === '1' ? 'Male' : record.user.gender === '2' ? 'Female' : record.user.gender || '',
     record.user.age || '',
@@ -42,15 +55,17 @@ export const downloadCSV = (records: AttendanceRecord[], filename?: string) => {
     record.user.zoneNameGuj || '',
     record.user.subZoneName || '',
     record.user.subZoneNameGuj || '',
-    record.user.kutumbId || '',
     record.status,
     record.date,
     formatTo12Hour(record.time),
+    ...(includeComparison ? [record.preAttendanceStatus || '', record.attendanceStatus || ''] : []),
+    record.user.familyLeaderNameEng || '',
+    record.user.familyLeaderNameGuj || '',
   ]);
 
   const csvContent =
     'data:text/csv;charset=utf-8,' +
-    [headers.map(escapeCSV).join(','), ...rows.map((row) => row.join(','))].join('\n');
+    [headers.map(escapeCSV).join(','), ...rows.map((row) => row.map((value) => escapeCSV(value)).join(','))].join('\n');
 
   const encodedUri = encodeURI(csvContent);
   const link = document.createElement('a');
