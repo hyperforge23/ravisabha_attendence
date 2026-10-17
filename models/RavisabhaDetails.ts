@@ -59,7 +59,7 @@ const RavisabhaDetails: Model<IRavisabhaDetails> =
   mongoose.model<IRavisabhaDetails>("ravisabha_details", RavisabhaDetailsSchema);
 
 export async function getPreAttendanceConflictMessage(excludeId?: string) {
-  const filter: mongoose.FilterQuery<IRavisabhaDetails> = { pre_attendance: true };
+  const filter: { pre_attendance: boolean; _id?: { $ne: string } } = { pre_attendance: true };
   if (excludeId) {
     filter._id = { $ne: excludeId };
   }
