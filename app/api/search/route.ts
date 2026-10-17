@@ -52,6 +52,8 @@ export async function GET(request: Request) {
       middleNameGuj: user.MiddleNameGuj,
       lastNameGuj: user.LastNameGuj,
       gender: user.Gender?.toString(),
+      kutumbId: user.KutumbId,
+      isMainPersonInFamily: user.IsMainPersonInFamily === true,
     }));
 
     return NextResponse.json({ users: formattedUsers });
