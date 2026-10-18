@@ -50,8 +50,14 @@ export default function AddUserModal({
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [mainPersons, setMainPersons] = useState<User[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedMemberCandidate, setSelectedMemberCandidate] =
+    useState<Candidate | null>(null);
   const [selectedMainPerson, setSelectedMainPerson] = useState<User | null>(null);
   const [existingKutumbMain, setExistingKutumbMain] = useState<User | null>(null);
+  const [memberCandidateQuery, setMemberCandidateQuery] = useState('');
+  const [memberCandidates, setMemberCandidates] = useState<Candidate[]>([]);
+  const [isLookingUpMemberCandidate, setIsLookingUpMemberCandidate] =
+    useState(false);
   const isEditMode = !!editUser;
 
   // Populate form when editing
@@ -143,6 +149,34 @@ export default function AddUserModal({
     return () => clearTimeout(timer);
   }, [isEditMode, lookupQuery, mode]);
 
+  useEffect(() => {
+    if (
+      isEditMode ||
+      mode !== 'member' ||
+      !selectedMainPerson ||
+      memberCandidateQuery.trim().length < 2
+    ) {
+      setMemberCandidates([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsLookingUpMemberCandidate(true);
+      try {
+        const { data } = await axios.get('/api/users/candidates', {
+          params: { query: memberCandidateQuery },
+        });
+        setMemberCandidates(data.candidates || []);
+      } catch {
+        setMemberCandidates([]);
+      } finally {
+        setIsLookingUpMemberCandidate(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [isEditMode, mode, selectedMainPerson, memberCandidateQuery]);
+
   const emptyPersonalForm = {
     firstName: '',
     middleName: '',
@@ -161,16 +195,22 @@ export default function AddUserModal({
     setCandidates([]);
     setMainPersons([]);
     setSelectedCandidate(null);
+    setSelectedMemberCandidate(null);
     setSelectedMainPerson(null);
     setExistingKutumbMain(null);
+    setMemberCandidateQuery('');
+    setMemberCandidates([]);
     setError('');
     setFormData(emptyPersonalForm);
   };
 
   const clearKutumbContext = () => {
     setSelectedMainPerson(null);
+    setSelectedMemberCandidate(null);
     setLookupQuery('');
+    setMemberCandidateQuery('');
     setMainPersons([]);
+    setMemberCandidates([]);
     setError('');
     setFormData(emptyPersonalForm);
   };
@@ -201,8 +241,36 @@ export default function AddUserModal({
 
   const selectMainPerson = (person: User) => {
     setSelectedMainPerson(person);
+    setSelectedMemberCandidate(null);
     setLookupQuery('');
+    setMemberCandidateQuery('');
     setMainPersons([]);
+    setMemberCandidates([]);
+    setFormData(emptyPersonalForm);
+  };
+
+  const selectMemberCandidate = (candidate: Candidate) => {
+    setSelectedMemberCandidate(candidate);
+    setMemberCandidateQuery('');
+    setMemberCandidates([]);
+    setFormData({
+      firstName: candidate.firstName,
+      middleName: candidate.middleName || '',
+      lastName: candidate.lastName,
+      smkNo: candidate.smkNo,
+      mobileNo: candidate.mobileNo,
+      gender: candidate.gender || '1',
+      age: candidate.age?.toString() || '',
+      presentVillageEng: '',
+      addressDescription: '',
+    });
+  };
+
+  const clearMemberCandidateSelection = () => {
+    setSelectedMemberCandidate(null);
+    setMemberCandidateQuery('');
+    setMemberCandidates([]);
+    setFormData(emptyPersonalForm);
   };
 
   const openFamilyMemberForMain = (person: User) => {
@@ -260,7 +328,10 @@ export default function AddUserModal({
         const response = await axios.post('/api/users', {
           ...formData,
           mode,
-          candidateId: selectedCandidate?.id,
+          candidateId:
+            mode === 'main'
+              ? selectedCandidate?.id
+              : selectedMemberCandidate?.id,
           mainPersonId: selectedMainPerson?.id,
         });
         data = response.data;
@@ -286,6 +357,9 @@ export default function AddUserModal({
           data.message ||
             `Family member added to Kutumb ${selectedMainPerson?.kutumbId ?? ''}. Add another or clear Kutumb when done.`.trim()
         );
+        setSelectedMemberCandidate(null);
+        setMemberCandidateQuery('');
+        setMemberCandidates([]);
         setFormData(emptyPersonalForm);
       } else {
         setFormData(emptyPersonalForm);
@@ -511,6 +585,85 @@ export default function AddUserModal({
                   >
                     Clear Kutumb
                   </button>
+                </div>
+              )}
+
+              {mode === 'member' && selectedMainPerson && (
+                <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Search existing Non-SMK candidate (recommended)
+                      </label>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        Reuses their record and attendance history. Or leave
+                        empty to add a brand-new family member below.
+                      </p>
+                    </div>
+                    {selectedMemberCandidate && (
+                      <button
+                        type="button"
+                        onClick={clearMemberCandidateSelection}
+                        className="shrink-0 text-sm font-medium text-gray-700 underline hover:no-underline"
+                      >
+                        Clear selection
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={memberCandidateQuery}
+                    onChange={(event) =>
+                      setMemberCandidateQuery(event.target.value)
+                    }
+                    placeholder="Name, mobile, or Non-SMK ID"
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                  />
+                  {isLookingUpMemberCandidate && (
+                    <p className="text-xs text-gray-500">Searching...</p>
+                  )}
+                  {memberCandidates.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                      {memberCandidates.map((candidate) => (
+                        <button
+                          type="button"
+                          key={candidate.id}
+                          onClick={() => selectMemberCandidate(candidate)}
+                          className="flex w-full items-center justify-between border-b border-gray-100 px-3 py-2 text-left last:border-0 hover:bg-gray-50"
+                        >
+                          <span>
+                            <span className="block text-sm font-medium text-gray-900">
+                              {candidate.firstName} {candidate.middleName}{' '}
+                              {candidate.lastName}
+                            </span>
+                            <span className="block text-xs text-gray-500">
+                              {candidate.smkNo} ·{' '}
+                              {candidate.mobileNo || 'No mobile'}
+                            </span>
+                          </span>
+                          <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+                            {candidate.attendanceCount} ravisabhas
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!isLookingUpMemberCandidate &&
+                    memberCandidateQuery.trim().length >= 2 &&
+                    memberCandidates.length === 0 && (
+                      <p className="text-sm text-gray-500">
+                        No candidates match. Use the form below for a new
+                        family member (new Non-SMK ID will be generated).
+                      </p>
+                    )}
+                  {selectedMemberCandidate && (
+                    <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+                      Adding candidate {selectedMemberCandidate.firstName}{' '}
+                      {selectedMemberCandidate.lastName} (
+                      {selectedMemberCandidate.smkNo}) to Kutumb{' '}
+                      {selectedMainPerson.kutumbId}.
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -255,41 +255,92 @@ export async function POST(request: Request) {
 
       const mainPersonObjectId = new mongoose.Types.ObjectId(mainPersonId);
       const household = await readSmkHouseholdFields(mainPersonObjectId);
-
-      const finalSmkNo = await generateUniqueSmkId(
-        firstName,
-        middleName || "",
-        lastName
-      );
       const memberAddress = household.addressDescription;
       const memberVillage = household.presentVillageEng || "";
 
-      const newUser = await SmkDetail.create({
-        BhaktId: Date.now(),
-        SmkId: finalSmkNo,
-        FirstName: firstName,
-        MiddleName: middleName || "",
-        LastName: lastName,
-        FirstNameGuj: "",
-        MiddleNameGuj: "",
-        LastNameGuj: "",
-        Gender: gender ? parseInt(gender) : 1,
-        age: age ? parseInt(age) : 0,
-        MobileNo: mobileNo
-          ? parseInt(mobileNo, 10)
-          : household.mobileNo ?? mainPerson.MobileNo ?? 0,
-        PresentVillageEng: memberVillage,
-        AddressDescription: memberAddress,
-        PresentVillageGuj: "",
-        NativeEng: "",
-        NativeGuj: "",
-        ZoneName: "",
-        ZoneNameGuj: "",
-        SubZoneName: "",
-        SubZoneNameGuj: "",
-        KutumbId: mainPerson.KutumbId,
-        IsMainPersonInFamily: false,
-      });
+      let newUser: any = null;
+
+      if (candidateId && mongoose.Types.ObjectId.isValid(candidateId)) {
+        const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            const candidate = await NonSmkCandidate.findById(candidateId).session(
+              session
+            );
+            if (!candidate) {
+              throw new Error("CANDIDATE_NOT_FOUND");
+            }
+            if (await SmkDetail.exists({ _id: candidate._id }).session(session)) {
+              throw new Error("CANDIDATE_ALREADY_PROMOTED");
+            }
+
+            const candidateObject = candidate.toObject();
+            delete (candidateObject as any).__v;
+
+            const created = await SmkDetail.create(
+              [
+                {
+                  ...candidateObject,
+                  _id: candidate._id,
+                  FirstName: firstName,
+                  MiddleName: middleName || "",
+                  LastName: lastName,
+                  Gender: gender ? parseInt(gender) : candidate.Gender || 1,
+                  age: age ? parseInt(age) : candidate.age || 0,
+                  MobileNo: mobileNo
+                    ? parseInt(mobileNo, 10)
+                    : candidate.MobileNo || 0,
+                  PresentVillageEng: memberVillage,
+                  AddressDescription: memberAddress,
+                  KutumbId: mainPerson.KutumbId,
+                  IsMainPersonInFamily: false,
+                },
+              ],
+              { session }
+            );
+            newUser = created[0];
+            await NonSmkCandidate.deleteOne(
+              { _id: candidate._id },
+              { session }
+            );
+          });
+        } finally {
+          await session.endSession();
+        }
+      } else {
+        const finalSmkNo = await generateUniqueSmkId(
+          firstName,
+          middleName || "",
+          lastName
+        );
+
+        newUser = await SmkDetail.create({
+          BhaktId: Date.now(),
+          SmkId: finalSmkNo,
+          FirstName: firstName,
+          MiddleName: middleName || "",
+          LastName: lastName,
+          FirstNameGuj: "",
+          MiddleNameGuj: "",
+          LastNameGuj: "",
+          Gender: gender ? parseInt(gender) : 1,
+          age: age ? parseInt(age) : 0,
+          MobileNo: mobileNo
+            ? parseInt(mobileNo, 10)
+            : household.mobileNo ?? mainPerson.MobileNo ?? 0,
+          PresentVillageEng: memberVillage,
+          AddressDescription: memberAddress,
+          PresentVillageGuj: "",
+          NativeEng: "",
+          NativeGuj: "",
+          ZoneName: "",
+          ZoneNameGuj: "",
+          SubZoneName: "",
+          SubZoneNameGuj: "",
+          KutumbId: mainPerson.KutumbId,
+          IsMainPersonInFamily: false,
+        });
+      }
 
       if (memberAddress || memberVillage) {
         await SmkDetail.collection.updateOne(
