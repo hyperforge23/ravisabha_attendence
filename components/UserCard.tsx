@@ -24,7 +24,7 @@ export default function UserCard({
   onUserUpdated,
 }: UserCardProps) {
   const { refreshRecords, records, preAttendanceStatus, showPreAttendance } = useAttendance();
-  const { user: authUser } = useAuth();
+  const { user: authUser, isAdmin } = useAuth();
 
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -149,20 +149,24 @@ export default function UserCard({
               />
               Bhojan
             </label>
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-            >
-              <Edit2 className="h-4 w-4" />
-              <span>Edit</span>
-            </button>
-            <button
-              onClick={() => setIsDeleteModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Delete</span>
-            </button>
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  <span>Edit</span>
+                </button>
+                <button
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete</span>
+                </button>
+              </>
+            )}
             <button
               onClick={onClear}
               className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"

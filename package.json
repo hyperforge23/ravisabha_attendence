@@ -9,11 +9,16 @@
     "lint": "eslint",
     "migrate:non-smk": "node scripts/migrate-non-smk-candidates.mjs",
     "migrate:non-smk:execute": "node scripts/migrate-non-smk-candidates.mjs --execute",
-    "seed:kutumb-test": "node scripts/seed-kutumb-test-attendance.mjs --execute --reset"
+    "seed:kutumb-test": "node scripts/seed-kutumb-test-attendance.mjs --execute --reset",
+    "set-role": "node scripts/set-user-role.mjs",
+    "setup-admin": "node scripts/setup-admin.mjs"
   },
   "dependencies": {
     "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "dotenv": "^18.0.8",
+    "jose": "^6.2.12",
     "lucide-react": "^0.554.0",
     "mongoose": "^9.0.0",
     "mongoose-autopopulate": "^1.2.1",
@@ -25,6 +30,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

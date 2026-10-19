@@ -1,11 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import PreAttendance from "@/models/PreAttendence";
 import SmkDetail from "@/models/SmkDetail";
 import mongoose from "mongoose";
+import { requireRole } from "@/lib/auth";
 import "@/models";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authResult = await requireRole(request, ['admin', 'enterer']);
+  if (authResult instanceof NextResponse) return authResult;
   try {
     await connectDb();
 

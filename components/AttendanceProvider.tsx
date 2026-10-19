@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AttendanceRecord, AttendanceStatus } from '@/lib/types';
+import { useAuth } from '@/components/AuthProvider';
 import axios from 'axios';
 
 interface AttendanceContextType {
@@ -20,6 +21,7 @@ const AttendanceContext = createContext<AttendanceContextType | undefined>(undef
 export function AttendanceProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const ravisabhaId = searchParams?.get('ravisabhaId');
+  const { isAdmin } = useAuth();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [preAttendanceStatus, setPreAttendanceStatus] = useState<Record<string, "Present" | "Absent">>({});
 
@@ -114,7 +116,7 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AttendanceContext.Provider value={{ records, preAttendanceStatus, showPreAttendance: Boolean(ravisabhaId), addRecord, updateRecordStatus, removeRecord, refreshRecords: async () => { await Promise.all([fetchRecords(), fetchPreAttendance()]); } }}>
+    <AttendanceContext.Provider value={{ records, preAttendanceStatus, showPreAttendance: Boolean(ravisabhaId) && isAdmin, addRecord, updateRecordStatus, removeRecord, refreshRecords: async () => { await Promise.all([fetchRecords(), fetchPreAttendance()]); } }}>
       {children}
     </AttendanceContext.Provider>
   );

@@ -21,7 +21,7 @@ export default function LoginPage() {
         username,
         password,
       });
-      login(data.user);
+      login(data.user); // data.user now includes role
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid username or password');
     }

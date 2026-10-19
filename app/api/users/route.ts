@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import SmkDetail from "@/models/SmkDetail";
 import NonSmkCandidate from "@/models/NonSmkCandidate";
 import Attendance from "@/models/Attendance";
 import { getNextNonSmkKutumbId } from "@/models/Sequence";
 import mongoose from "mongoose";
+import { requireRole } from "@/lib/auth";
 
 // Helper function to generate SMK ID
 // Format: Non_[FirstInitial][MiddleInitial][LastInitial]_[DDMMYYYY]
@@ -119,7 +120,10 @@ function formatUser(user: any) {
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireRole(request, ['admin', 'enterer']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await connectDb();
 

@@ -7,6 +7,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import AddRavisabhaModal from '@/components/AddRavisabhaModal';
 import { formatIndianCurrency } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
 
 interface Ravisabha {
   _id: string;
@@ -29,6 +30,7 @@ export default function RavisabhaListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRavisabha, setEditingRavisabha] = useState<Ravisabha | null>(null);
   const router = useRouter();
+  const { isAdmin } = useAuth();
 
   const fetchRavisabhas = async () => {
     setIsLoading(true);
@@ -92,16 +94,18 @@ export default function RavisabhaListPage() {
             Manage and view this month's ravisabha sessions
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingRavisabha(null);
-            setIsModalOpen(true);
-          }}
-          className="flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add New Ravisabha
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setEditingRavisabha(null);
+              setIsModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add New Ravisabha
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -152,16 +156,18 @@ export default function RavisabhaListPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingRavisabha(ravisabha);
-                        setIsModalOpen(true);
-                      }}
-                      className="px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg transition-colors"
-                    >
-                      Edit
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingRavisabha(ravisabha);
+                          setIsModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-lg transition-colors"
+                      >
+                        Edit
+                      </button>
+                    )}
                     <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-900 transition-colors" />
                   </div>
                 </div>

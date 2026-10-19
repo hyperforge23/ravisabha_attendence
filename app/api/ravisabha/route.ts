@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import RavisabhaDetails, { getPreAttendanceConflictMessage } from "@/models/RavisabhaDetails";
 import Attendance from "@/models/Attendance";
 import PreAttendance from "@/models/PreAttendence";
 import mongoose from "mongoose";
+import { requireRole } from "@/lib/auth";
 // Import all models to ensure they are registered
 import "@/models";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authResult = await requireRole(request, ['admin', 'enterer']);
+  if (authResult instanceof NextResponse) return authResult;
   try {
     await connectDb();
 
@@ -148,7 +151,10 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await connectDb();
 
@@ -207,7 +213,10 @@ export async function POST(request: Request) {
 
 
 // PATCH: upsert mehman counts for a given date (used when no ravisabhaId is in context)
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await connectDb();
 
