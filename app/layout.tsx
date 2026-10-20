@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AttendanceProvider } from "@/components/AttendanceProvider";
 import { AuthProvider } from "@/components/AuthProvider";
+import AxiosInterceptor from "@/components/AxiosInterceptor";
 import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ["latin"] });
@@ -23,6 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
+          <AxiosInterceptor />
           <Suspense fallback={<div>Loading...</div>}>
             <AttendanceProvider>
               <div className="min-h-screen bg-gray-50 text-gray-900">

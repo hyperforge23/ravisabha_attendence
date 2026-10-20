@@ -2,15 +2,20 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import axios from 'axios';
 
 interface AuthUser {
   id: string;
   username: string;
+  role: 'admin' | 'enterer';
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: AuthUser | null;
+  role: 'admin' | 'enterer' | null;
+  isAdmin: boolean;
+  isEnterer: boolean;
   login: (user: AuthUser) => void;
   logout: () => void;
 }
@@ -25,15 +30,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Check local storage for auth state on mount
-    const storedAuth = localStorage.getItem('isAuthenticated');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedAuth === 'true' && storedUser) {
-      setIsAuthenticated(true);
-      setUser(JSON.parse(storedUser));
-    }
-    setIsLoading(false);
+    // Load session from server
+    const loadSession = async () => {
+      try {
+        const { data } = await axios.get('/api/auth/me');
+        setIsAuthenticated(true);
+        setUser(data.user);
+      } catch (error) {
+        setIsAuthenticated(false);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSession();
   }, []);
 
   useEffect(() => {
@@ -51,21 +62,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (userData: AuthUser) => {
     setIsAuthenticated(true);
     setUser(userData);
-    localStorage.setItem('isAuthenticated', 'true');
-    localStorage.setItem('user', JSON.stringify(userData));
     router.push('/ravisabha');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await axios.post('/api/logout');
+    } catch (error) {
+      // Ignore error, still logout on client
+    }
     setIsAuthenticated(false);
     setUser(null);
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('user');
     router.push('/login');
   };
 
+  const role = user?.role || null;
+  const isAdmin = role === 'admin';
+  const isEnterer = role === 'enterer';
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, role, isAdmin, isEnterer, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

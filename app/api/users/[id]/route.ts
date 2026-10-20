@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import SmkDetail from "@/models/SmkDetail";
 import Attendance from "@/models/Attendance";
+import { requireRole } from "@/lib/auth";
 
 // GET single user
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(request, ['admin', 'enterer']);
+  if (authResult instanceof NextResponse) return authResult;
   try {
     await connectDb();
     const { id } = await params;
@@ -44,9 +47,11 @@ export async function GET(
 
 // PUT - Update user
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
   try {
     await connectDb();
     const { id } = await params;
@@ -157,9 +162,11 @@ export async function PUT(
 
 // DELETE user
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
   try {
     await connectDb();
     const { id } = await params;

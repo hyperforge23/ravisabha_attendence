@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDb } from "@/lib/db";
 import RavisabhaDetails, { getPreAttendanceConflictMessage } from "@/models/RavisabhaDetails";
+import { requireRole } from "@/lib/auth";
 // Import all models to ensure they are registered
 import "@/models";
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(request, ['admin', 'enterer']);
+  if (authResult instanceof NextResponse) return authResult;
   try {
     await connectDb();
 
@@ -32,9 +35,12 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await connectDb();
 
@@ -94,9 +100,12 @@ export async function PUT(
 }
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await connectDb();
 
@@ -129,9 +138,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
+
   try {
     await connectDb();
 

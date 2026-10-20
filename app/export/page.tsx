@@ -8,6 +8,8 @@ import { Download, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, ChevronLeft, Chev
 import SearchSection from '@/components/SearchSection';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
 
 type RavisabhaReport = 'attendance' | 'pre-absent-attended' | 'pre-present-missing' | 'pre-not-added';
 
@@ -35,6 +37,9 @@ interface Ravisabha {
 }
 
 export default function ExportPage() {
+  const { isAdmin, isAuthenticated } = useAuth();
+  const router = useRouter();
+  
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('ravisabha');
   
@@ -75,6 +80,26 @@ export default function ExportPage() {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
+
+  // Access control
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!isAdmin) {
+      router.push('/ravisabha');
+    }
+  }, [isAuthenticated, isAdmin, router]);
+
+  // Early return for non-admin
+  if (!isAuthenticated || !isAdmin) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Access Denied</h2>
+          <p className="mt-2 text-gray-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Helper function to get date range
   const getDateRange = (): { startDate: Date; endDate: Date } => {

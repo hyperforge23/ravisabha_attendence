@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDb } from "@/lib/db";
 import Attendance from "@/models/Attendance";
 import NonSmkCandidate from "@/models/NonSmkCandidate";
 import SmkDetail from "@/models/SmkDetail";
+import { requireRole } from "@/lib/auth";
 
 const NON_SMK_KUTUMB_MIN = 100001;
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const authResult = await requireRole(request, ['admin', 'enterer']);
+  if (authResult instanceof NextResponse) return authResult;
   try {
     await connectDb();
     const { searchParams } = new URL(request.url);
