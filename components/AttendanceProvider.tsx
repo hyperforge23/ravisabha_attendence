@@ -65,31 +65,37 @@ export function AttendanceProvider({ children }: { children: ReactNode }) {
         
         const { data } = await axios.get('/api/attendance', { params });
         
+        console.log('Fetched attendance data:', data); // Debug log
+        
         // Map DB records to frontend AttendanceRecord type
-        const mappedRecords: AttendanceRecord[] = data.records.map((record: any) => ({
-          id: record._id,
-          user: {
-            id: record.smkDetailId._id,
-            firstName: record.smkDetailId.FirstName,
-            middleName: record.smkDetailId.MiddleName,
-            lastName: record.smkDetailId.LastName,
-            smkNo: record.smkDetailId.SmkId,
-            mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-            firstNameGuj: record.smkDetailId.FirstNameGuj,
-            middleNameGuj: record.smkDetailId.MiddleNameGuj,
-            lastNameGuj: record.smkDetailId.LastNameGuj,
-            gender: record.smkDetailId.Gender?.toString(),
-          },
-          status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
-          date: record.date.split('T')[0],
-          time: new Date(record.date).toTimeString().slice(0, 5),
-          timestamp: new Date(record.date).getTime(),
-          createdByUsername: record.userId?.UserName || '',
-        }));
+        const mappedRecords: AttendanceRecord[] = (data.records || [])
+          .filter((record: any) => record.smkDetailId) // Filter out records without user data
+          .map((record: any) => ({
+            id: record._id,
+            user: {
+              id: record.smkDetailId._id,
+              firstName: record.smkDetailId.FirstName,
+              middleName: record.smkDetailId.MiddleName || '',
+              lastName: record.smkDetailId.LastName,
+              smkNo: record.smkDetailId.SmkId,
+              mobileNo: record.smkDetailId.MobileNo?.toString() || '',
+              firstNameGuj: record.smkDetailId.FirstNameGuj || '',
+              middleNameGuj: record.smkDetailId.MiddleNameGuj || '',
+              lastNameGuj: record.smkDetailId.LastNameGuj || '',
+              gender: record.smkDetailId.Gender?.toString() || '',
+            },
+            status: record.status.charAt(0).toUpperCase() + record.status.slice(1), // Capitalize
+            date: record.date.split('T')[0],
+            time: new Date(record.date).toTimeString().slice(0, 5),
+            timestamp: new Date(record.date).getTime(),
+            createdByUsername: record.userId?.UserName || '',
+          }));
 
+        console.log('Mapped records:', mappedRecords.length); // Debug log
         setRecords(mappedRecords);
       } catch (error) {
-        console.error('Error fetching today records:', error);
+        console.error('Error fetching attendance records:', error);
+        setRecords([]);
       }
   }
 
