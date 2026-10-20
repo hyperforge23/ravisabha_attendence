@@ -63,15 +63,24 @@ export const downloadCSV = (records: CsvRecord[], filename?: string) => {
     record.user.familyLeaderNameGuj || '',
   ]);
 
-  const csvContent =
-    'data:text/csv;charset=utf-8,' +
-    [headers.map(escapeCSV).join(','), ...rows.map((row) => row.map((value) => escapeCSV(value)).join(','))].join('\n');
+  // Create CSV content with proper UTF-8 BOM for Excel compatibility
+  const csvContent = [
+    headers.map(escapeCSV).join(','), 
+    ...rows.map((row) => row.map((value) => escapeCSV(value)).join(','))
+  ].join('\n');
 
-  const encodedUri = encodeURI(csvContent);
+  // Add UTF-8 BOM (Byte Order Mark) so Excel recognizes Unicode characters
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  
   const link = document.createElement('a');
-  link.setAttribute('href', encodedUri);
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
   link.setAttribute('download', filename || 'attendance_export.csv');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  
+  // Clean up the URL object
+  URL.revokeObjectURL(url);
 };
