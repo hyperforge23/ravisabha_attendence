@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
 
 // PATCH: upsert mehman counts for a given date (used when no ravisabhaId is in context)
 export async function PATCH(request: NextRequest) {
-  const authResult = await requireRole(request, ['admin']);
+  const authResult = await requireRole(request, ['admin', 'enterer']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

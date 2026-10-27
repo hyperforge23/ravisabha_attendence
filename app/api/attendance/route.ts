@@ -150,10 +150,48 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const records = await Attendance.find(query)
-    .populate("smkDetailId") // Populate user details if needed
-    .populate("userId", "UserName") // Populate the user who created the entry
-    .sort({ date: -1 });
+    const rawRecords = await Attendance.aggregate([
+      { $match: query },
+      {
+        $lookup: {
+          from: 'smkdetails',
+          localField: 'smkDetailId',
+          foreignField: '_id',
+          as: 'smkUser',
+        },
+      },
+      {
+        $lookup: {
+          from: 'non_smk_candidates',
+          localField: 'smkDetailId',
+          foreignField: '_id',
+          as: 'nonSmkUser',
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'userInfo',
+        },
+      },
+      { $sort: { date: -1 } },
+      {
+        $addFields: {
+          smkDetailId: { $ifNull: [{ $arrayElemAt: ['$smkUser', 0] }, { $arrayElemAt: ['$nonSmkUser', 0] }] },
+          userId: { $arrayElemAt: ['$userInfo', 0] },
+        },
+      },
+    ]);
+
+    // Format to match expected populate shape
+    const records = rawRecords.map((r: any) => ({
+      ...r,
+      _id: r._id,
+      smkDetailId: r.smkDetailId || null,
+      userId: r.userId || null,
+    }));
 
     return NextResponse.json({ records }, { status: 200 });
   } catch (error) {

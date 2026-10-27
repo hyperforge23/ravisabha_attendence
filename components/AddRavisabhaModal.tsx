@@ -360,7 +360,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
             <p className="text-sm font-medium text-gray-700">Pre-Attendance</p>
             <div className="flex items-center gap-3">
               <span className={`text-sm font-medium transition-colors duration-200 ${!preAttendance ? 'text-red-600' : 'text-gray-400'}`}>
-                De-activate
+                Inactive
               </span>
               <button
                 type="button"
@@ -381,7 +381,7 @@ export default function AddRavisabhaModal({ isOpen, onClose, onSuccess, ravisabh
                 />
               </button>
               <span className={`text-sm font-medium transition-colors duration-200 ${preAttendance ? 'text-green-600' : 'text-gray-400'}`}>
-                Activate
+                Active
               </span>
             </div>
           </div>

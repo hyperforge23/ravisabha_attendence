@@ -32,6 +32,8 @@ interface Ravisabha {
   notes?: string;
   attendanceCount?: number;
   preAttendanceCount?: number;
+  mehmanMale?: number;
+  mehmanFemale?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -39,17 +41,17 @@ interface Ravisabha {
 export default function ExportPage() {
   const { isAdmin, isAuthenticated } = useAuth();
   const router = useRouter();
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('ravisabha');
-  
+
   const [selectedRavisabha, setSelectedRavisabha] = useState<Ravisabha | null>(null);
   const [ravisabhas, setRavisabhas] = useState<Ravisabha[]>([]);
   const [isLoadingRavisabhas, setIsLoadingRavisabhas] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [exportingReport, setExportingReport] = useState<{ id: string; kind: RavisabhaReport } | null>(null);
-  
+
   // Person search state
   const [selectedPerson, setSelectedPerson] = useState<UserType | null>(null);
   const [personAttendanceStats, setPersonAttendanceStats] = useState<{
@@ -58,7 +60,7 @@ export default function ExportPage() {
     percentage: number;
   } | null>(null);
   const [isLoadingPersonStats, setIsLoadingPersonStats] = useState(false);
-  
+
   // Date range filter state
   const [dateRange, setDateRange] = useState<DateRange>('this-month');
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -76,7 +78,7 @@ export default function ExportPage() {
     date: '',
     status: 'All',
   });
-  
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
@@ -184,8 +186,8 @@ export default function ExportPage() {
         );
         const attendedRavisabhas = attendedRavisabhaIds.size;
 
-        const percentage = totalRavisabhas > 0 
-          ? Math.round((attendedRavisabhas / totalRavisabhas) * 100) 
+        const percentage = totalRavisabhas > 0
+          ? Math.round((attendedRavisabhas / totalRavisabhas) * 100)
           : 0;
 
         setPersonAttendanceStats({
@@ -211,7 +213,7 @@ export default function ExportPage() {
       try {
         let params: any = {};
         const { startDate, endDate } = getDateRange();
-        
+
         if (dateRange === 'custom') {
           // Use month selector for custom
           params.month = selectedMonth;
@@ -249,12 +251,12 @@ export default function ExportPage() {
             ravisabhaId: selectedRavisabha._id,
           },
         });
-        
+
         if (!data || !data.records) {
           setRecords([]);
           return;
         }
-        
+
         const mappedRecords: AttendanceRecord[] = data.records
           .filter((record: any) => record.smkDetailId) // Filter out records without populated smkDetailId
           .map((record: any) => ({
@@ -436,7 +438,7 @@ export default function ExportPage() {
   };
 
   const handleExport = () => {
-    const filename = selectedRavisabha 
+    const filename = selectedRavisabha
       ? `attendance_${formatDateForFilename(selectedRavisabha.date)}.csv`
       : 'attendance_export.csv';
     downloadCSV(filteredAndSortedRecords, filename);
@@ -502,8 +504,8 @@ export default function ExportPage() {
       const preAttendanceRequest = kind === 'attendance'
         ? null
         : axios.get('/api/pre-attendance', {
-            params: { ravisabhaId, populate: 'smk' },
-          });
+          params: { ravisabhaId, populate: 'smk' },
+        });
 
       const [attendanceResponse, preAttendanceResponse] = await Promise.all([
         attendanceRequest,
@@ -714,6 +716,11 @@ export default function ExportPage() {
                               <span>
                                 Attendance:
                                 <span className="text-gray-900"> {ravisabha.attendanceCount || 0}</span>
+                                {((ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)) > 0 && (
+                                  <span className="text-gray-500 text-xs ml-1">
+                                    (+{(ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)} Mehman)
+                                  </span>
+                                )}
                               </span>
                               <span>
                                 Pre-Attendance:
@@ -782,7 +789,7 @@ export default function ExportPage() {
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Search by Person</label>
                     <SearchSection onSelectUser={(user) => setSelectedPerson(user)} showAddUser={false} />
-                    
+
                     {selectedPerson && (
                       <div className="mt-3 flex items-center gap-2">
                         <button

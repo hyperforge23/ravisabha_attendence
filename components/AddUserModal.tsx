@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, UserPlus, Loader2 } from 'lucide-react';
+import { X, UserPlus, Loader2, Plus } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { User } from '@/lib/types';
+import MarkLookupAttendanceModal from './MarkLookupAttendanceModal';
 
 type AddMode = 'main' | 'member';
 
@@ -48,6 +49,9 @@ export default function AddUserModal({
   const [lookupQuery, setLookupQuery] = useState('');
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [selectedCandidateForAttendance, setSelectedCandidateForAttendance] = useState<Candidate | null>(null);
+  const [candidateRefreshKey, setCandidateRefreshKey] = useState(0);
   const [mainPersons, setMainPersons] = useState<User[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [selectedMemberCandidate, setSelectedMemberCandidate] =
@@ -147,7 +151,7 @@ export default function AddUserModal({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [isEditMode, lookupQuery, mode]);
+  }, [isEditMode, lookupQuery, mode, candidateRefreshKey]);
 
   useEffect(() => {
     if (
@@ -343,7 +347,7 @@ export default function AddUserModal({
           data.user.kutumbId != null ? ` (Kutumb ${data.user.kutumbId})` : '';
         toast.success(
           data.message ||
-            `Kutumb created successfully${kutumbLabel}. Add family members below.`
+          `Kutumb created successfully${kutumbLabel}. Add family members below.`
         );
         setMode('member');
         setSelectedMainPerson(data.user);
@@ -355,7 +359,7 @@ export default function AddUserModal({
       } else if (!isEditMode && mode === 'member') {
         toast.success(
           data.message ||
-            `Family member added to Kutumb ${selectedMainPerson?.kutumbId ?? ''}. Add another or clear Kutumb when done.`.trim()
+          `Family member added to Kutumb ${selectedMainPerson?.kutumbId ?? ''}. Add another or clear Kutumb when done.`.trim()
         );
         setSelectedMemberCandidate(null);
         setMemberCandidateQuery('');
@@ -416,22 +420,20 @@ export default function AddUserModal({
                 <button
                   type="button"
                   onClick={() => resetSelection('main')}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                    mode === 'main'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === 'main'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
                   Main Person
                 </button>
                 <button
                   type="button"
                   onClick={() => resetSelection('member')}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                    mode === 'member'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${mode === 'member'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
                 >
                   Family Member
                 </button>
@@ -461,11 +463,14 @@ export default function AddUserModal({
                   <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white">
                     {mode === 'main'
                       ? candidates.map((candidate) => (
+                        <div
+                          key={candidate.id}
+                          className="flex items-center border-b border-gray-100 last:border-0"
+                        >
                           <button
                             type="button"
-                            key={candidate.id}
                             onClick={() => selectCandidate(candidate)}
-                            className="flex w-full items-center justify-between border-b border-gray-100 px-3 py-2 text-left last:border-0 hover:bg-gray-50"
+                            className="flex flex-1 items-center justify-between px-3 py-2 text-left hover:bg-gray-50"
                           >
                             <span>
                               <span className="block text-sm font-medium text-gray-900">
@@ -476,31 +481,45 @@ export default function AddUserModal({
                               </span>
                             </span>
                             <span
-                              className={`rounded-full px-2 py-1 text-xs font-medium ${
-                                candidate.eligible
-                                  ? 'bg-green-100 text-green-700'
-                                  : 'bg-amber-100 text-amber-700'
-                              }`}
+                              className={`rounded-full px-2 py-1 text-xs font-medium ${candidate.eligible
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-amber-100 text-amber-700'
+                                }`}
                             >
                               {candidate.attendanceCount}/{MIN_DISTINCT_RAVISABHAS_FOR_KUTUMB}
                             </span>
                           </button>
-                        ))
+                          {candidate.attendanceCount < MIN_DISTINCT_RAVISABHAS_FOR_KUTUMB && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedCandidateForAttendance(candidate);
+                                setIsAttendanceModalOpen(true);
+                              }}
+                              className="mr-2 rounded-lg bg-blue-600 p-2 text-white hover:bg-blue-700"
+                              title="Mark past attendance"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))
                       : mainPersons.map((person) => (
-                          <button
-                            type="button"
-                            key={person.id}
-                            onClick={() => selectMainPerson(person)}
-                            className="w-full border-b border-gray-100 px-3 py-2 text-left last:border-0 hover:bg-gray-50"
-                          >
-                            <span className="block text-sm font-medium text-gray-900">
-                              {person.firstName} {person.middleName} {person.lastName}
-                            </span>
-                            <span className="block text-xs text-gray-500">
-                              Kutumb {person.kutumbId} · {person.mobileNo || 'No mobile'}
-                            </span>
-                          </button>
-                        ))}
+                        <button
+                          type="button"
+                          key={person.id}
+                          onClick={() => selectMainPerson(person)}
+                          className="w-full border-b border-gray-100 px-3 py-2 text-left last:border-0 hover:bg-gray-50"
+                        >
+                          <span className="block text-sm font-medium text-gray-900">
+                            {person.firstName} {person.middleName} {person.lastName}
+                          </span>
+                          <span className="block text-xs text-gray-500">
+                            Kutumb {person.kutumbId} · {person.mobileNo || 'No mobile'}
+                          </span>
+                        </button>
+                      ))}
                   </div>
                 )}
                 {!isLookingUp &&
@@ -554,11 +573,10 @@ export default function AddUserModal({
 
               {selectedCandidate && (
                 <div
-                  className={`rounded-lg border px-4 py-3 text-sm ${
-                    selectedCandidate.eligible
-                      ? 'border-green-200 bg-green-50 text-green-800'
-                      : 'border-amber-200 bg-amber-50 text-amber-800'
-                  }`}
+                  className={`rounded-lg border px-4 py-3 text-sm ${selectedCandidate.eligible
+                    ? 'border-green-200 bg-green-50 text-green-800'
+                    : 'border-amber-200 bg-amber-50 text-amber-800'
+                    }`}
                 >
                   Selected {selectedCandidate.firstName} {selectedCandidate.lastName}.
                   Attendance: {selectedCandidate.attendanceCount} distinct ravisabhas.
@@ -858,6 +876,24 @@ export default function AddUserModal({
           </div>
         </form>
       </div>
+
+      {selectedCandidateForAttendance && (
+        <MarkLookupAttendanceModal
+          isOpen={isAttendanceModalOpen}
+          onClose={() => {
+            setIsAttendanceModalOpen(false);
+            setSelectedCandidateForAttendance(null);
+          }}
+          onSuccess={() => {
+            // Small delay to ensure DB write completes before re-fetching
+            setTimeout(() => setCandidateRefreshKey((k) => k + 1), 500);
+          }}
+          candidateId={selectedCandidateForAttendance.id}
+          candidateName={`${selectedCandidateForAttendance.firstName} ${selectedCandidateForAttendance.lastName}`}
+          candidateSmkNo={selectedCandidateForAttendance.smkNo}
+          currentAttendanceCount={selectedCandidateForAttendance.attendanceCount}
+        />
+      )}
     </div>
   );
 }

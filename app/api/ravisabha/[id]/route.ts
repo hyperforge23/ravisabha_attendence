@@ -84,7 +84,7 @@ export async function PUT(
     );
   } catch (error: any) {
     console.error("Error updating ravisabha:", error);
-    
+
     if (error.code === 11000) {
       return NextResponse.json(
         { message: "Ravisabha already exists for this date" },
@@ -103,7 +103,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const authResult = await requireRole(request, ['admin']);
+  const authResult = await requireRole(request, ['admin', 'enterer']);
   if (authResult instanceof NextResponse) return authResult;
 
   try {

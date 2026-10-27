@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { AttendanceRecord } from '@/lib/types';
 import axios from 'axios';
 import PreAttendanceBadge from '@/components/PreAttendanceBadge';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 type SortKey = 'name' | 'smkNo' | 'mobileNo' | 'dateTime' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -65,77 +66,33 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     preAttendance: 'All',
   });
 
-  const { records, removeRecord, refreshRecords, preAttendanceStatus, showPreAttendance } = useAttendance();
+  const { records, removeRecord, refreshRecords, preAttendanceStatus, showPreAttendance, male, female, bhojan, mehmanMale, mehmanFemale, total, isLoadingCounts } = useAttendance();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [serverCounts, setServerCounts] = useState<{ male: number; female: number; total: number } | null>(null);
-  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
   const prevRecordsLengthRef = useRef<number>(0);
 
-  // Reset counts when ravisabhaId changes
+  // Refresh when navigating back to this page (e.g. from Non-SMK page)
   useEffect(() => {
-    setServerCounts(null);
-    setIsLoadingCounts(true);
+    if (!ravisabhaId) return;
+    if (sessionStorage.getItem('attendance-needs-refresh') === '1') {
+      sessionStorage.removeItem('attendance-needs-refresh');
+      refreshRecords();
+    }
+  }, [pathname, searchParams, ravisabhaId, refreshRecords]);
+
+  // Listen for same-page attendance updates
+  useEffect(() => {
+    if (!ravisabhaId) return;
+    const handleExternalUpdate = async () => await refreshRecords();
+    window.addEventListener('attendance-updated', handleExternalUpdate);
+    return () => window.removeEventListener('attendance-updated', handleExternalUpdate);
+  }, [refreshRecords, ravisabhaId]);
+
+  // Reset tracking ref when ravisabhaId changes
+  useEffect(() => {
     prevRecordsLengthRef.current = 0;
   }, [ravisabhaId]);
-
-  // Update loading state when records are loaded
-  useEffect(() => {
-    // If we have records or if we're not viewing a specific ravisabha (today's view), counts are ready
-    if (records.length > 0 || !ravisabhaId) {
-      setIsLoadingCounts(false);
-    }
-  }, [records.length, ravisabhaId]);
-
-  // Refresh counts from server when records change (after marking attendance)
-  useEffect(() => {
-    // Only refresh if records length actually changed (new record added or removed)
-    if (prevRecordsLengthRef.current === records.length) {
-      return;
-    }
-
-    prevRecordsLengthRef.current = records.length;
-    
-    // Refresh counts from server when records change
-    const refreshCounts = async () => {
-      try {
-        const params: any = {};
-        if (ravisabhaId) {
-          params.ravisabhaId = ravisabhaId;
-        } else {
-          const today = new Date().toISOString().split('T')[0];
-          params.date = today;
-        }
-
-        const { data } = await axios.get('/api/attendance/stats', { params });
-        setServerCounts(data);
-      } catch (error) {
-        console.error('Error refreshing counts:', error);
-        // On error, clear serverCounts to use calculated counts
-        setServerCounts(null);
-      }
-
-      // Also reload bhojanCount from the ravisabha doc
-      try {
-        if (ravisabhaId) {
-          const { data } = await axios.get(`/api/ravisabha/${ravisabhaId}`);
-          setBhojanCount(data.ravisabha?.bhojanCount ?? 0);
-        } else {
-          const today = new Date().toISOString().split('T')[0];
-          const { data } = await axios.get('/api/ravisabha', {
-            params: { startDate: today, endDate: today },
-          });
-          const list = data.ravisabhas ?? [];
-          setBhojanCount(list.length > 0 ? (list[0].bhojanCount ?? 0) : 0);
-        }
-      } catch {
-        // silently ignore
-      }
-    };
-
-    // Small delay to ensure the API has the latest data
-    const timer = setTimeout(refreshCounts, 100);
-    return () => clearTimeout(timer);
-  }, [records.length, ravisabhaId]);
 
   // Mehman (guest) count state — persisted in DB
   const [mehmanCount, setMehmanCount] = useState({ male: 0, female: 0 });
@@ -207,11 +164,8 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
           setMehmanRavisabhaId(String(data.ravisabha._id));
         }
       }
-      // Update local state by adding the increment
-      setMehmanCount((prev) => ({
-        male: prev.male + maleAdd,
-        female: prev.female + femaleAdd,
-      }));
+      // Trigger full refresh to get updated mehman counts from server
+      await refreshRecords();
       // Reset stepper to 0
       setMehmanInput({ male: 0, female: 0 });
       setIsMehmanModalOpen(false);
@@ -227,17 +181,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Get current context (ravisabhaId or date)
-      const params: any = {};
-      if (ravisabhaId) {
-        params.ravisabhaId = ravisabhaId;
-      } else {
-        const today = new Date().toISOString().split('T')[0];
-        params.date = today;
-      }
-
-      const { data } = await axios.get('/api/attendance/stats', { params });
-      setServerCounts(data);
+      await refreshRecords();
       toast.success('Counts refreshed');
     } catch (error) {
       console.error('Error refreshing counts:', error);
@@ -275,7 +219,6 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     });
     setVisibleFilters({});
     setSortConfig({ key: 'dateTime', direction: 'desc' });
-    setServerCounts(null); // Clear server counts on filter clear to show derived counts
   };
 
   const hasActiveFilters = useMemo(() => {
@@ -380,24 +323,10 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
     );
   };
 
-  const genderCounts = useMemo(() => {
-    const counts = { male: 0, female: 0, total: filteredAndSortedRecords.length };
-    filteredAndSortedRecords.forEach((record) => {
-      const gender = record.user.gender?.toString().toLowerCase();
-      if (gender === '1' || gender === 'male' || gender === 'm') {
-        counts.male++;
-      } else if (gender === '2' || gender === 'female' || gender === 'f') {
-        counts.female++;
-      }
-    });
-    return counts;
-  }, [filteredAndSortedRecords]);
-
-  const baseCounts = serverCounts || genderCounts;
   const displayCounts = {
-    male: baseCounts.male + mehmanCount.male,
-    female: baseCounts.female + mehmanCount.female,
-    total: baseCounts.total + mehmanCount.male + mehmanCount.female,
+    male: male + mehmanMale,
+    female: female + mehmanFemale,
+    total: total,
   };
 
   return (
@@ -430,7 +359,7 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
                   <span className="text-gray-300">|</span>
                   <span>Bhojan: <span className="font-medium text-gray-900">{bhojanCount}</span></span>
                   <span className="text-gray-300">|</span>
-                   <span className="text-[15px]">Mehman: <span className="font-medium text-gray-900">{mehmanCount.male + mehmanCount.female}</span></span>
+                   <span className="text-[15px]">Mehman: <span className="font-medium text-gray-900">{mehmanMale + mehmanFemale}</span></span>
                   {/* Desktop: continue on same line */}
                   <span className="hidden sm:inline text-gray-300">|</span>
                   <span className="hidden sm:inline">Total: <span className="font-medium text-gray-900">{displayCounts.total}</span></span>

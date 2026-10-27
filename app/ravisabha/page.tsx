@@ -37,11 +37,11 @@ export default function RavisabhaListPage() {
     try {
       const now = new Date();
       const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      
+
       const { data } = await axios.get('/api/ravisabha', {
         params: { month },
       });
-      
+
       setRavisabhas(data.ravisabhas || []);
     } catch (error) {
       console.error('Error fetching ravisabhas:', error);
