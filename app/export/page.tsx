@@ -32,6 +32,8 @@ interface Ravisabha {
   notes?: string;
   attendanceCount?: number;
   preAttendanceCount?: number;
+  mehmanMale?: number;
+  mehmanFemale?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -39,17 +41,17 @@ interface Ravisabha {
 export default function ExportPage() {
   const { isAdmin, isAuthenticated } = useAuth();
   const router = useRouter();
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('ravisabha');
-  
+
   const [selectedRavisabha, setSelectedRavisabha] = useState<Ravisabha | null>(null);
   const [ravisabhas, setRavisabhas] = useState<Ravisabha[]>([]);
   const [isLoadingRavisabhas, setIsLoadingRavisabhas] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [exportingReport, setExportingReport] = useState<{ id: string; kind: RavisabhaReport } | null>(null);
-  
+
   // Person search state
   const [selectedPerson, setSelectedPerson] = useState<UserType | null>(null);
   const [personAttendanceStats, setPersonAttendanceStats] = useState<{
@@ -58,7 +60,7 @@ export default function ExportPage() {
     percentage: number;
   } | null>(null);
   const [isLoadingPersonStats, setIsLoadingPersonStats] = useState(false);
-  
+
   // Date range filter state
   const [dateRange, setDateRange] = useState<DateRange>('this-month');
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -76,7 +78,7 @@ export default function ExportPage() {
     date: '',
     status: 'All',
   });
-  
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
@@ -184,8 +186,8 @@ export default function ExportPage() {
         );
         const attendedRavisabhas = attendedRavisabhaIds.size;
 
-        const percentage = totalRavisabhas > 0 
-          ? Math.round((attendedRavisabhas / totalRavisabhas) * 100) 
+        const percentage = totalRavisabhas > 0
+          ? Math.round((attendedRavisabhas / totalRavisabhas) * 100)
           : 0;
 
         setPersonAttendanceStats({
@@ -211,7 +213,7 @@ export default function ExportPage() {
       try {
         let params: any = {};
         const { startDate, endDate } = getDateRange();
-        
+
         if (dateRange === 'custom') {
           // Use month selector for custom
           params.month = selectedMonth;
@@ -249,45 +251,44 @@ export default function ExportPage() {
             ravisabhaId: selectedRavisabha._id,
           },
         });
-        
+
         if (!data || !data.records) {
           setRecords([]);
           return;
         }
-        
+
         const mappedRecords: AttendanceRecord[] = data.records
-          .filter((record: any) => record.smkDetailId) // Filter out records without populated smkDetailId
           .map((record: any) => ({
             id: record._id,
             user: {
-              id: record.smkDetailId._id,
-              firstName: record.smkDetailId.FirstName,
-              middleName: record.smkDetailId.MiddleName,
-              lastName: record.smkDetailId.LastName,
-              smkNo: record.smkDetailId.SmkId,
-              mobileNo: record.smkDetailId.MobileNo?.toString() || '',
-              firstNameGuj: record.smkDetailId.FirstNameGuj,
-              middleNameGuj: record.smkDetailId.MiddleNameGuj,
-              lastNameGuj: record.smkDetailId.LastNameGuj,
-              gender: record.smkDetailId.Gender?.toString(),
-              bhaktId: record.smkDetailId.BhaktId,
-              age: record.smkDetailId.age,
-              presentVillageEng: record.smkDetailId.PresentVillageEng,
-              presentVillageGuj: record.smkDetailId.PresentVillageGuj,
-              nativeEng: record.smkDetailId.NativeEng,
-              nativeGuj: record.smkDetailId.NativeGuj,
-              zoneName: record.smkDetailId.ZoneName,
-              zoneNameGuj: record.smkDetailId.ZoneNameGuj,
-              subZoneName: record.smkDetailId.SubZoneName,
-              subZoneNameGuj: record.smkDetailId.SubZoneNameGuj,
-              kutumbId: record.smkDetailId.KutumbId,
-              familyLeaderNameEng: record.smkDetailId.FamilyLeaderNameEng || '',
-              familyLeaderNameGuj: record.smkDetailId.FamilyLeaderNameGuj || '',
+              id: record.smkDetailId?._id || record.smkDetailId || '',
+              firstName: record.smkDetailId?.FirstName || record.name?.split(' ')[0] || 'Unknown',
+              middleName: record.smkDetailId?.MiddleName || '',
+              lastName: record.smkDetailId?.LastName || record.name?.split(' ').slice(1).join(' ') || '',
+              smkNo: record.smkDetailId?.SmkId || record.SmkId || '',
+              mobileNo: record.smkDetailId?.MobileNo?.toString() || '',
+              firstNameGuj: record.smkDetailId?.FirstNameGuj || '',
+              middleNameGuj: record.smkDetailId?.MiddleNameGuj || '',
+              lastNameGuj: record.smkDetailId?.LastNameGuj || '',
+              gender: record.smkDetailId?.Gender?.toString() || '',
+              bhaktId: record.smkDetailId?.BhaktId,
+              age: record.smkDetailId?.age,
+              presentVillageEng: record.smkDetailId?.PresentVillageEng || '',
+              presentVillageGuj: record.smkDetailId?.PresentVillageGuj || '',
+              nativeEng: record.smkDetailId?.NativeEng || '',
+              nativeGuj: record.smkDetailId?.NativeGuj || '',
+              zoneName: record.smkDetailId?.ZoneName || '',
+              zoneNameGuj: record.smkDetailId?.ZoneNameGuj || '',
+              subZoneName: record.smkDetailId?.SubZoneName || '',
+              subZoneNameGuj: record.smkDetailId?.SubZoneNameGuj || '',
+              kutumbId: record.smkDetailId?.KutumbId,
+              familyLeaderNameEng: record.smkDetailId?.FamilyLeaderNameEng || '',
+              familyLeaderNameGuj: record.smkDetailId?.FamilyLeaderNameGuj || '',
             },
-            status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
-            date: record.date.split('T')[0],
-            time: new Date(record.date).toTimeString().slice(0, 5),
-            timestamp: new Date(record.date).getTime(),
+            status: record.status?.charAt(0).toUpperCase() + record.status?.slice(1) || 'Present',
+            date: record.date?.split('T')[0] || '',
+            time: record.date ? new Date(record.date).toTimeString().slice(0, 5) : '',
+            timestamp: record.date ? new Date(record.date).getTime() : 0,
             createdByUsername: record.userId?.UserName || '',
           }));
 
@@ -436,7 +437,7 @@ export default function ExportPage() {
   };
 
   const handleExport = () => {
-    const filename = selectedRavisabha 
+    const filename = selectedRavisabha
       ? `attendance_${formatDateForFilename(selectedRavisabha.date)}.csv`
       : 'attendance_export.csv';
     downloadCSV(filteredAndSortedRecords, filename);
@@ -502,8 +503,8 @@ export default function ExportPage() {
       const preAttendanceRequest = kind === 'attendance'
         ? null
         : axios.get('/api/pre-attendance', {
-            params: { ravisabhaId, populate: 'smk' },
-          });
+          params: { ravisabhaId, populate: 'smk' },
+        });
 
       const [attendanceResponse, preAttendanceResponse] = await Promise.all([
         attendanceRequest,
@@ -511,14 +512,24 @@ export default function ExportPage() {
       ]);
 
       const attendanceRecords: CsvRecord[] = (attendanceResponse.data?.records || [])
-        .filter((record: any) => record.smkDetailId)
         .map((record: any) => ({
           id: record._id,
-          user: mapSmkUser(record.smkDetailId),
-          status: record.status.charAt(0).toUpperCase() + record.status.slice(1),
-          date: record.date.split('T')[0],
-          time: new Date(record.date).toTimeString().slice(0, 5),
-          timestamp: new Date(record.date).getTime(),
+          user: record.smkDetailId && typeof record.smkDetailId === 'object'
+            ? mapSmkUser(record.smkDetailId)
+            : {
+                id: String(record.smkDetailId || ''),
+                firstName: record.name?.split(' ')[0] || 'Unknown',
+                middleName: '',
+                lastName: record.name?.split(' ').slice(1).join(' ') || '',
+                smkNo: record.SmkId || '',
+                mobileNo: '',
+                firstNameGuj: '', middleNameGuj: '', lastNameGuj: '',
+                gender: '',
+              },
+          status: record.status?.charAt(0).toUpperCase() + record.status?.slice(1) || 'Present',
+          date: record.date?.split('T')[0] || '',
+          time: record.date ? new Date(record.date).toTimeString().slice(0, 5) : '',
+          timestamp: record.date ? new Date(record.date).getTime() : 0,
         }));
 
       if (kind === 'attendance') {
@@ -536,17 +547,40 @@ export default function ExportPage() {
       let filename = `attendance_${dateSlug}.csv`;
 
       if (kind === 'pre-absent-attended') {
-        reportRecords = preRecords
+        // Build set of all smkDetailIds that have ANY pre-attendance record
+        const preIds = new Set(
+          preRecords.map((record: any) => String(record.smkDetailId._id))
+        );
+
+        // 1. Attended + pre-attendance Absent
+        const absentAttended: CsvRecord[] = preRecords
           .filter((record: any) => record.status === 'Absent' && attendedIds.has(String(record.smkDetailId._id)))
           .map((record: any) => {
             const attendance = attendanceById.get(String(record.smkDetailId._id))!;
             return {
               ...attendance,
-              preAttendanceStatus: 'Absent',
-              attendanceStatus: attendance.status,
+              preAttendanceFilled: 'Yes',
             };
           });
-        filename = `pre_absent_attended_${dateSlug}.csv`;
+
+        // 2. Attended + no pre-attendance record at all
+        const noPreAttended: CsvRecord[] = attendanceRecords
+          .filter((record) => !preIds.has(String(record.user.id)))
+          .map((record) => ({
+            ...record,
+            preAttendanceFilled: 'No',
+          }));
+
+        // Deduplicate by user id
+        const seen = new Set<string>();
+        reportRecords = [...absentAttended, ...noPreAttended].filter((r) => {
+          const uid = String(r.user.id);
+          if (seen.has(uid)) return false;
+          seen.add(uid);
+          return true;
+        });
+
+        filename = `pre_absent_or_not_added_attended_${dateSlug}.csv`;
       } else {
         reportRecords = preRecords
           .filter((record: any) => record.status === 'Present' && !attendedIds.has(String(record.smkDetailId._id)))
@@ -714,6 +748,11 @@ export default function ExportPage() {
                               <span>
                                 Attendance:
                                 <span className="text-gray-900"> {ravisabha.attendanceCount || 0}</span>
+                                {((ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)) > 0 && (
+                                  <span className="text-gray-500 text-xs ml-1">
+                                    (+{(ravisabha.mehmanMale || 0) + (ravisabha.mehmanFemale || 0)} Mehman)
+                                  </span>
+                                )}
                               </span>
                               <span>
                                 Pre-Attendance:
@@ -746,7 +785,7 @@ export default function ExportPage() {
                       <div className="mt-4 flex flex-col gap-2">
                         {([
                           { kind: 'attendance' as const, label: 'Export Attendance', className: 'bg-green-600 text-white hover:bg-green-700' },
-                          { kind: 'pre-absent-attended' as const, label: 'Export Absent but Attended', className: 'border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100' },
+                          { kind: 'pre-absent-attended' as const, label: 'Export Absent / No Pre-Attendance (Attended)', className: 'border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100' },
                           { kind: 'pre-present-missing' as const, label: 'Export Present, Not Attended', className: 'border border-blue-300 bg-blue-50 text-blue-900 hover:bg-blue-100' },
                           { kind: 'pre-not-added' as const, label: 'Export Yet to Add Pre-Attendance', className: 'border border-gray-300 bg-white text-gray-800 hover:bg-gray-50' },
                         ]).map((report) => {
@@ -782,7 +821,7 @@ export default function ExportPage() {
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">Search by Person</label>
                     <SearchSection onSelectUser={(user) => setSelectedPerson(user)} showAddUser={false} />
-                    
+
                     {selectedPerson && (
                       <div className="mt-3 flex items-center gap-2">
                         <button

@@ -15,12 +15,14 @@ const escapeCSV = (value: string | number | undefined | null): string => {
 export type CsvRecord = AttendanceRecord & {
   preAttendanceStatus?: string;
   attendanceStatus?: string;
+  preAttendanceFilled?: string; // 'Yes' or 'No'
 };
 
 export const downloadCSV = (records: CsvRecord[], filename?: string) => {
   const includeComparison = records.some(
     (record) => record.preAttendanceStatus || record.attendanceStatus
   );
+  const includePreFilled = records.some((record) => record.preAttendanceFilled !== undefined);
   const headers = [
     'Kutumb ID', 'SMK No',
     'First Name', 'Middle Name', 'Last Name',
@@ -32,6 +34,7 @@ export const downloadCSV = (records: CsvRecord[], filename?: string) => {
     'Sub Zone', 'Sub Zone (Guj)',
     'Status', 'Date', 'Time',
     ...(includeComparison ? ['Pre-Attendance', 'Attendance'] : []),
+    ...(includePreFilled ? ['Pre-Attendance Filled'] : []),
     'Family Leader', 'Family Leader (Guj)',
   ];
   const rows = records.map((record) => [
@@ -59,20 +62,21 @@ export const downloadCSV = (records: CsvRecord[], filename?: string) => {
     record.date,
     formatTo12Hour(record.time),
     ...(includeComparison ? [record.preAttendanceStatus || '', record.attendanceStatus || ''] : []),
+    ...(includePreFilled ? [record.preAttendanceFilled || ''] : []),
     record.user.familyLeaderNameEng || '',
     record.user.familyLeaderNameGuj || '',
   ]);
 
   // Create CSV content with proper UTF-8 BOM for Excel compatibility
   const csvContent = [
-    headers.map(escapeCSV).join(','), 
+    headers.map(escapeCSV).join(','),
     ...rows.map((row) => row.map((value) => escapeCSV(value)).join(','))
   ].join('\n');
 
   // Add UTF-8 BOM (Byte Order Mark) so Excel recognizes Unicode characters
   const BOM = '\uFEFF';
   const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-  
+
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
@@ -80,7 +84,9 @@ export const downloadCSV = (records: CsvRecord[], filename?: string) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   // Clean up the URL object
   URL.revokeObjectURL(url);
 };
+
+
