@@ -228,6 +228,21 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // If the deleted record had bhojan, decrement bhojanCount on the ravisabha doc
+    if (deletedRecord.bhojan === true) {
+      if (deletedRecord.ravisabhaId && mongoose.Types.ObjectId.isValid(String(deletedRecord.ravisabhaId))) {
+        await RavisabhaDetails.findByIdAndUpdate(deletedRecord.ravisabhaId, { $inc: { bhojanCount: -1 } });
+      } else if (deletedRecord.date) {
+        const date = new Date(deletedRecord.date);
+        const startOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0));
+        const endOfDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+        await RavisabhaDetails.findOneAndUpdate(
+          { date: { $gte: startOfDay, $lte: endOfDay } },
+          { $inc: { bhojanCount: -1 } }
+        );
+      }
+    }
+
     return NextResponse.json(
       { message: "Record deleted successfully" },
       { status: 200 }

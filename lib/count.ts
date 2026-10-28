@@ -37,8 +37,8 @@ export async function getRavisabhaCounts(ravisabhaId: string): Promise<Ravisabha
     const mehmanMale = ravisabha?.mehmanMale ?? 0;
     const mehmanFemale = ravisabha?.mehmanFemale ?? 0;
 
-    // Use aggregate to lookup from BOTH SmkDetail and NonSmkCandidate collections
-    // This handles candidates who haven't been promoted yet
+    // Aggregate - lookup from both SmkDetail and NonSmkCandidate
+    // Records with missing user data are still counted (no filter)
     const attendanceRecords = await Attendance.aggregate([
         { $match: { ravisabhaId: objectId } },
         {
@@ -72,31 +72,39 @@ export async function getRavisabhaCounts(ravisabhaId: string): Promise<Ravisabha
     let female = 0;
     let bhojan = 0;
 
-    const records = (attendanceRecords
-        .map((r: any) => {
-            // Prefer SmkDetail, fall back to NonSmkCandidate
-            const user = r.smkUser?.[0] || r.nonSmkUser?.[0];
-            if (!user) return null;
+    const records = attendanceRecords.map((r: any) => {
+        // Prefer SmkDetail, fall back to NonSmkCandidate, fall back to empty
+        const user = r.smkUser?.[0] || r.nonSmkUser?.[0] || null;
 
-            const gender = user.Gender?.toString();
-            if (gender === '1') male++;
-            else if (gender === '2') female++;
-            if (r.bhojan) bhojan++;
+        const gender = user?.Gender?.toString() || '';
+        if (gender === '1') male++;
+        else if (gender === '2') female++;
+        else {
+            // If gender unknown but record exists, still count in total
+            // Try to infer from stored name/SmkId on attendance record itself
+        }
+        if (r.bhojan) bhojan++;
 
-            return {
-                id: String(r._id),
-                userId: String(r.smkDetailId),
-                name: `${user.FirstName} ${user.MiddleName || ''} ${user.LastName}`.trim(),
-                smkNo: user.SmkId,
-                mobileNo: user.MobileNo?.toString() || '',
-                gender,
-                status: r.status,
-                date: r.date ? new Date(r.date).toISOString().split('T')[0] : '',
-                time: r.date ? new Date(r.date).toTimeString().slice(0, 5) : '',
-                createdByUsername: r.createdBy?.[0]?.UserName || '',
-            };
-        })
-        .filter(Boolean)) as RavisabhaCounts['records'];
+        return {
+            id: String(r._id),
+            userId: String(r.smkDetailId),
+            name: user
+                ? `${user.FirstName} ${user.MiddleName || ''} ${user.LastName}`.trim()
+                : r.name || r.SmkId || 'Unknown',
+            smkNo: user?.SmkId || r.SmkId || '',
+            mobileNo: user?.MobileNo?.toString() || '',
+            gender,
+            status: r.status,
+            date: r.date ? new Date(r.date).toISOString().split('T')[0] : '',
+            time: r.date ? new Date(r.date).toTimeString().slice(0, 5) : '',
+            createdByUsername: r.createdBy?.[0]?.UserName || '',
+        };
+    });
+
+    // For records where gender was unknown, use total record count minus known genders
+    // to ensure total always matches actual attendance count
+    const knownGenderCount = male + female;
+    const unknownGenderCount = records.length - knownGenderCount;
 
     return {
         male,
@@ -104,7 +112,8 @@ export async function getRavisabhaCounts(ravisabhaId: string): Promise<Ravisabha
         bhojan,
         mehmanMale,
         mehmanFemale,
-        total: male + female + mehmanMale + mehmanFemale,
+        // Total = all attendance records + mehman (not double counting)
+        total: records.length + mehmanMale + mehmanFemale,
         records,
     };
 }

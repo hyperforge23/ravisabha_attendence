@@ -97,5 +97,5 @@ export function useRavisabhaCounts(ravisabhaId: string | null): RavisabhaCounts 
     return () => window.removeEventListener('attendance-updated', handle);
   }, [fetchCounts]);
 
-  return { ...data, isLoading, refresh: () => fetchCounts(ravisabhaIdRef.current) };
+  return { ...data, isLoading, refresh: async () => { await fetchCounts(ravisabhaIdRef.current); } };
 }

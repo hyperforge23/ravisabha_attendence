@@ -324,9 +324,9 @@ export default function AttendanceList({ ravisabhaId }: AttendanceListProps) {
   };
 
   const displayCounts = {
-    male: male + mehmanMale,
-    female: female + mehmanFemale,
-    total: total,
+    male,
+    female,
+    total,
   };
 
   return (
